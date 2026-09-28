@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, QrCode, Clock, Home, Send } from 'lucide-react';
+import { User, Clock, Home, Send } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const ResidentView: React.FC = () => {
   const { residents, movementLogs, addVisitor } = useApp();
@@ -110,15 +111,21 @@ export const ResidentView: React.FC = () => {
               </div>
             </div>
 
-            {/* Resident Gate Pass QR Code */}
+            {/* Real Scannable Resident Gate Pass QR Code */}
             <div className="mt-6 w-full bg-white p-4 rounded-2xl border border-slate-300 shadow-inner flex flex-col items-center">
-              <div className="w-36 h-36 bg-slate-900 rounded-xl p-2 flex items-center justify-center border border-slate-800 shadow-md">
-                <QrCode className="w-32 h-32 text-emerald-400" />
+              <div className="p-3 bg-white rounded-xl shadow-md flex items-center justify-center border border-slate-200">
+                <QRCodeSVG
+                  value={activeResident.id}
+                  size={140}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  level="H"
+                />
               </div>
-              <p className="text-[11px] text-slate-700 font-bold mt-2 font-mono">
+              <p className="text-[11px] text-slate-800 font-extrabold mt-2.5 font-mono tracking-wider">
                 PASS ID: {activeResident.id.toUpperCase()}
               </p>
-              <p className="text-[10px] text-slate-500">Show this QR code at society main gate for instant scan</p>
+              <p className="text-[10px] text-slate-500">Scannable Gate Pass • Show to Security Camera</p>
             </div>
           </div>
 
