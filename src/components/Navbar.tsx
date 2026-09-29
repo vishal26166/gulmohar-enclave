@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogIn, LogOut, KeyRound } from 'lucide-react';
+import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogOut, KeyRound } from 'lucide-react';
 
 interface NavbarProps {
   onOpenEmergency: () => void;
@@ -12,6 +12,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
 
   const unreadAlerts = alerts.filter((a) => !a.read);
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   return (
     <header className="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
@@ -34,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
             </div>
           </div>
 
-          {/* Mobile SOS & Login button */}
+          {/* Mobile SOS & Logout button */}
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={onOpenEmergency}
@@ -44,20 +45,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
               SOS
             </button>
 
-            {currentUser ? (
+            {currentUser && (
               <button
                 onClick={logoutUser}
                 className="p-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold"
                 title="Log Out"
               >
                 <LogOut className="w-4 h-4 text-red-400" />
-              </button>
-            ) : (
-              <button
-                onClick={onOpenAuthModal}
-                className="bg-indigo-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1"
-              >
-                <LogIn className="w-3.5 h-3.5" /> Login
               </button>
             )}
           </div>
@@ -66,59 +60,68 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
         {/* Role Selection, Auth User & PG Switcher */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-end">
           
-          {/* Role Switcher Pills */}
-          <div className="bg-slate-950/80 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
-            <button
-              onClick={() => setRole('GUARD')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                role === 'GUARD'
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Gate Guard
-            </button>
+          {/* Admin Role Switcher Pills (Visible ONLY to Admin for master testing/management) */}
+          {isAdmin ? (
+            <div className="bg-slate-950/80 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+              <button
+                onClick={() => setRole('GUARD')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  role === 'GUARD'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Gate Guard
+              </button>
 
-            <button
-              onClick={() => setRole('WARDEN')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                role === 'WARDEN'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              PG Warden
-            </button>
+              <button
+                onClick={() => setRole('WARDEN')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  role === 'WARDEN'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                PG Warden
+              </button>
 
-            <button
-              onClick={() => setRole('ADMIN')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                role === 'ADMIN'
-                  ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              Admin
-            </button>
+              <button
+                onClick={() => setRole('ADMIN')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  role === 'ADMIN'
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                Admin
+              </button>
 
-            <button
-              onClick={() => setRole('RESIDENT')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                role === 'RESIDENT'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              Resident
-            </button>
-          </div>
+              <button
+                onClick={() => setRole('RESIDENT')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  role === 'RESIDENT'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                Resident
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Role: <strong className="text-emerald-400">{currentUser?.role || role}</strong>
+              </span>
+            </div>
+          )}
 
-          {/* Warden PG Selector dropdown (Visible only in WARDEN role) */}
-          {role === 'WARDEN' && (
+          {/* Warden PG Selector dropdown (Visible only in WARDEN role if Admin or authorized) */}
+          {role === 'WARDEN' && isAdmin && (
             <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-700">
               <span className="text-xs text-slate-400 font-medium">PG:</span>
               <select
@@ -214,14 +217,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
               />
               <div className="hidden lg:block text-left text-xs">
                 <p className="font-bold text-white leading-tight truncate max-w-[110px]">{currentUser.name}</p>
-                <p className="text-[10px] text-indigo-300 font-semibold">{currentUser.role}</p>
+                <p className="text-[10px] text-indigo-300 font-semibold">{currentUser.role} {currentUser.pgName ? `(${currentUser.pgName})` : ''}</p>
               </div>
               <button
                 onClick={logoutUser}
                 className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition-all"
                 title="Log Out Session"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 text-red-400" />
               </button>
             </div>
           ) : (

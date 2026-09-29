@@ -11,10 +11,11 @@ import { QRScannerModal } from './components/QRScannerModal';
 import { VisitorModal } from './components/VisitorModal';
 import { EmergencyModal } from './components/EmergencyModal';
 import { AuthModal } from './components/AuthModal';
+import { LoginScreen } from './components/LoginScreen';
 import type { Resident } from './types';
 
 const MainContent: React.FC = () => {
-  const { role } = useApp();
+  const { currentUser, role } = useApp();
 
   // Modals state
   const [isAddResidentOpen, setIsAddResidentOpen] = useState(false);
@@ -24,10 +25,15 @@ const MainContent: React.FC = () => {
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Strict Authentication Wall: If unauthenticated, render LoginScreen
+  if (!currentUser) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       
-      {/* Top Navbar with role switcher, user profile & emergency trigger */}
+      {/* Top Navbar with role status, user profile & emergency trigger */}
       <Navbar
         onOpenEmergency={() => setIsEmergencyModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}

@@ -48,7 +48,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_current_user`);
-    return saved ? JSON.parse(saved) : INITIAL_USER_ACCOUNTS[1]; // Default to Guard account
+    return saved ? JSON.parse(saved) : null; // Strictly null by default for auth wall!
   });
 
   const [role, setRoleState] = useState<Role>(currentUser?.role || 'GUARD');
@@ -385,7 +385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVisitors(INITIAL_VISITORS);
     setAlerts(INITIAL_ALERTS);
     setUserAccounts(INITIAL_USER_ACCOUNTS);
-    setCurrentUser(INITIAL_USER_ACCOUNTS[1]);
+    setCurrentUser(null);
     localStorage.clear();
     addAuditLog('System Reset', 'Reset all system database data to initial factory state.');
   };
