@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, Clock, Home, Send } from 'lucide-react';
+import { User, Clock, Home, Send, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Resident } from '../types';
 
@@ -72,6 +72,15 @@ export const ResidentView: React.FC = () => {
   };
 
   const isAdmin = currentUser?.role === 'ADMIN';
+
+  // Format rich QR Payload for optical scanners
+  const qrPayload = JSON.stringify({
+    id: activeResident.id,
+    name: activeResident.name,
+    phone: activeResident.phone,
+    room: activeResident.roomNumber,
+    pg: activeResident.pgName,
+  });
 
   return (
     <div className="space-y-6">
@@ -155,21 +164,23 @@ export const ResidentView: React.FC = () => {
               </div>
             </div>
 
-            {/* Real Scannable Resident Gate Pass QR Code */}
-            <div className="mt-6 w-full bg-white p-4 rounded-2xl border border-slate-300 shadow-inner flex flex-col items-center">
-              <div className="p-3 bg-white rounded-xl shadow-md flex items-center justify-center border border-slate-200">
+            {/* High-Contrast, Large Quiet-Zone Scannable Resident Gate Pass QR Code */}
+            <div className="mt-6 w-full bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xl flex flex-col items-center">
+              <div className="p-3 bg-white rounded-xl flex items-center justify-center shadow-inner">
                 <QRCodeSVG
-                  value={activeResident.id}
-                  size={140}
+                  value={qrPayload}
+                  size={180}
                   bgColor="#ffffff"
-                  fgColor="#0f172a"
-                  level="H"
+                  fgColor="#000000"
+                  level="L"
+                  includeMargin={true}
                 />
               </div>
-              <p className="text-[11px] text-slate-800 font-extrabold mt-2.5 font-mono tracking-wider">
+              <p className="text-[11px] text-slate-900 font-black mt-2 font-mono tracking-wider flex items-center gap-1">
+                <QrCode className="w-3.5 h-3.5 text-emerald-600" />
                 PASS ID: {activeResident.id.toUpperCase()}
               </p>
-              <p className="text-[10px] text-slate-500">Scannable Gate Pass • Show to Security Camera</p>
+              <p className="text-[10px] text-slate-600 font-semibold">Point security camera at this QR code to scan</p>
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, QrCode, LogIn, LogOut, Camera, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, QrCode, LogIn, LogOut, Camera, CameraOff, AlertTriangle, CheckCircle, Upload, FileImage } from 'lucide-react';
 import type { Resident } from '../types';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -18,35 +18,56 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scannerContainerId = 'reader';
 
-  // Process scanned decoded text (e.g. "usr-123", "res-101", "Sparsh Kumar Arya")
+  // Process scanned decoded text (e.g. JSON string, "usr-123", "res-101", "Sparsh Kumar Arya")
   const processDecodedText = (decodedText: string) => {
-    const textClean = decodedText.trim();
-    const textLower = textClean.toLowerCase();
+    let searchId = decodedText.trim();
+    let searchName = '';
+    let searchPhone = '';
+
+    // Attempt JSON parsing if payload is JSON
+    try {
+      if (decodedText.startsWith('{')) {
+        const parsed = JSON.parse(decodedText);
+        if (parsed.id) searchId = parsed.id;
+        if (parsed.name) searchName = parsed.name;
+        if (parsed.phone) searchPhone = parsed.phone;
+      }
+    } catch (e) {
+      // Raw string format
+    }
+
+    const textClean = searchId.toLowerCase();
+    const nameClean = searchName.toLowerCase();
+    const phoneClean = searchPhone.toLowerCase();
 
     // 1. Match in residents list
     let found = residents.find(
       (r) =>
-        r.id.toLowerCase() === textLower ||
-        r.name.toLowerCase() === textLower ||
-        r.phone.toLowerCase() === textLower ||
-        r.roomNumber.toLowerCase() === textLower ||
-        r.idNumber.toLowerCase() === textLower ||
-        textLower.includes(r.id.toLowerCase()) ||
-        r.name.toLowerCase().includes(textLower)
+        r.id.toLowerCase() === textClean ||
+        (nameClean && r.name.toLowerCase() === nameClean) ||
+        (phoneClean && r.phone.includes(phoneClean)) ||
+        r.name.toLowerCase() === textClean ||
+        r.phone.toLowerCase() === textClean ||
+        r.roomNumber.toLowerCase() === textClean ||
+        r.idNumber.toLowerCase() === textClean ||
+        textClean.includes(r.id.toLowerCase()) ||
+        r.name.toLowerCase().includes(textClean)
     );
 
     // 2. Fallback match in user accounts list if newly registered account
     if (!found) {
       const userMatch = userAccounts.find(
         (u) =>
-          u.id.toLowerCase() === textLower ||
-          u.name.toLowerCase() === textLower ||
-          u.phone.toLowerCase() === textLower ||
-          u.email.toLowerCase() === textLower ||
-          textLower.includes(u.id.toLowerCase()) ||
-          u.name.toLowerCase().includes(textLower)
+          u.id.toLowerCase() === textClean ||
+          (nameClean && u.name.toLowerCase() === nameClean) ||
+          u.name.toLowerCase() === textClean ||
+          u.phone.toLowerCase() === textClean ||
+          u.email.toLowerCase() === textClean ||
+          textClean.includes(u.id.toLowerCase()) ||
+          u.name.toLowerCase().includes(textClean)
       );
 
       if (userMatch) {
@@ -76,7 +97,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
       setScanMessage(`Scanned successfully: ${found.name} (${found.pgName}, Room ${found.roomNumber})`);
       setCameraError(null);
     } else {
-      setCameraError(`Unrecognized QR code or Pass ID: "${decodedText}". Try typing name or room number below.`);
+      setCameraError(`Unrecognized QR payload: "${decodedText}". Try searching name or room number below.`);
     }
   };
 
@@ -91,8 +112,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
       await html5QrcodeRef.current.start(
         { facingMode: 'environment' }, // Rear camera on mobile
         {
-          fps: 10,
-          qrbox: { width: 220, height: 220 },
+          fps: 20,
+          qrbox: { width: 240, height: 240 },
+          aspectRatio: 1.0,
         },
         (decodedText) => {
           processDecodedText(decodedText);
@@ -106,7 +128,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
       console.error('Camera access error:', err);
       setCameraActive(false);
       setCameraError(
-        'Unable to access camera. Please check camera permissions or select a resident manually below.'
+        'Unable to access camera. Please allow camera permissions or upload/type the QR pass below.'
       );
     }
   };
@@ -120,6 +142,19 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
         console.error('Error stopping camera:', err);
       }
       setCameraActive(false);
+    }
+  };
+
+  // Handle File Upload Scanning
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    try {
+      const html5Qrcode = new Html5Qrcode('reader-file');
+      const decodedText = await html5Qrcode.scanFile(file, true);
+      processDecodedText(decodedText);
+    } catch (err) {
+      setCameraError(`Could not decode QR code from uploaded image file.`);
     }
   };
 
@@ -168,6 +203,16 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-amber-500/30 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-200">
         
+        {/* Hidden Div & Input for File Scanner */}
+        <div id="reader-file" className="hidden"></div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-2">
@@ -188,30 +233,44 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
         <div className="p-5 space-y-4">
           
           {/* Live Camera Viewfinder Box */}
-          <div className="relative w-full min-h-[220px] bg-slate-950 border-2 border-dashed border-amber-500/40 rounded-2xl flex flex-col items-center justify-center overflow-hidden">
+          <div className="relative w-full min-h-[230px] bg-slate-950 border-2 border-dashed border-amber-500/40 rounded-2xl flex flex-col items-center justify-center overflow-hidden">
             <div id={scannerContainerId} className="w-full h-full"></div>
 
             {!cameraActive && (
               <div className="p-4 text-center space-y-2">
                 <CameraOff className="w-10 h-10 mx-auto text-slate-600" />
                 <p className="text-xs text-slate-400 font-medium">Camera preview inactive</p>
-                <button
-                  onClick={startCamera}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 mx-auto"
-                >
-                  <Camera className="w-3.5 h-3.5" /> Start Web Camera
-                </button>
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={startCamera}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
+                  >
+                    <Camera className="w-3.5 h-3.5" /> Start Camera
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 border border-slate-700"
+                  >
+                    <FileImage className="w-3.5 h-3.5 text-cyan-400" /> Scan Image File
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
           {/* Camera Error Alert */}
           {cameraError && (
-            <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <div>
+            <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <p className="font-semibold">{cameraError}</p>
               </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[10px] bg-red-900/60 hover:bg-red-800 text-red-100 px-2 py-1 rounded font-bold shrink-0"
+              >
+                Upload File
+              </button>
             </div>
           )}
 
@@ -262,9 +321,18 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
 
           {/* Manual Input Search Fallback */}
           <form onSubmit={handleManualSubmit} className="pt-2 border-t border-slate-800 space-y-2">
-            <label className="text-[11px] text-slate-400 font-semibold block">
-              Or enter Pass ID, Name or Room Number manually:
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] text-slate-400 font-semibold">
+                Or enter Pass ID, Name or Room Number:
+              </label>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+              >
+                <Upload className="w-3 h-3" /> Upload QR Screenshot
+              </button>
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
