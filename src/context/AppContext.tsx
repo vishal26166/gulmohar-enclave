@@ -17,7 +17,7 @@ interface AppContextType {
   userAccounts: UserAccount[];
 
   // Auth Actions
-  loginUser: (emailOrPhone: string, passwordStr: string, role: Role) => boolean;
+  loginUser: (emailOrPhone: string, passwordStr: string, selectedRole: Role) => { success: boolean; error?: string };
   registerUser: (newUser: UserAccount) => void;
   logoutUser: () => void;
   
@@ -140,35 +140,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newEntry, ...prev]);
   };
 
-  const loginUser = (emailOrPhone: string, _passwordStr: string, targetRole: Role): boolean => {
+  const loginUser = (
+    emailOrPhone: string,
+    _passwordStr: string,
+    selectedRole: Role
+  ): { success: boolean; error?: string } => {
     const inputClean = emailOrPhone.trim().toLowerCase();
-    
-    // Find matching user or fallback matching target role
-    let user = userAccounts.find(
-      (u) =>
-        (u.email.toLowerCase() === inputClean || u.phone.includes(inputClean)) &&
-        u.role === targetRole
+
+    if (!inputClean) {
+      return { success: false, error: 'Please enter your registered email address or phone number.' };
+    }
+
+    // 1. Find exact matching user by email or phone
+    const matchingUser = userAccounts.find(
+      (u) => u.email.toLowerCase() === inputClean || u.phone.trim().includes(inputClean)
     );
 
-    if (!user) {
-      user = userAccounts.find((u) => u.role === targetRole);
+    if (!matchingUser) {
+      return {
+        success: false,
+        error: `No account found registered with "${emailOrPhone}". Please sign up first.`,
+      };
     }
 
-    if (user) {
-      setCurrentUser(user);
-      setRoleState(user.role);
-      if (user.pgId) {
-        setActivePgId(user.pgId);
-      }
-      addAuditLog('User Login', `${user.name} logged in successfully as ${user.role}.`);
-      return true;
+    // 2. Strict Role Verification: Ensure user's registered role matches selected login role tab
+    if (matchingUser.role !== selectedRole) {
+      return {
+        success: false,
+        error: `Access Denied: Account "${matchingUser.name}" is registered as a ${matchingUser.role}, not a ${selectedRole}. Please select the ${matchingUser.role} tab to log in.`,
+      };
     }
 
-    return false;
+    // 3. Authenticate User
+    setCurrentUser(matchingUser);
+    setRoleState(matchingUser.role);
+    if (matchingUser.pgId) {
+      setActivePgId(matchingUser.pgId);
+    }
+    addAuditLog('User Login', `${matchingUser.name} logged in as ${matchingUser.role}.`);
+
+    return { success: true };
   };
 
   const registerUser = (newUser: UserAccount) => {
     setUserAccounts((prev) => [newUser, ...prev]);
+
+    // Also sync to residents database if user registered as a resident!
+    if (newUser.role === 'RESIDENT' && newUser.pgId && newUser.roomNumber) {
+      const existingRes = residents.find(r => r.phone === newUser.phone || r.name.toLowerCase() === newUser.name.toLowerCase());
+      if (!existingRes) {
+        const newResident: Resident = {
+          id: newUser.id,
+          name: newUser.name,
+          phone: newUser.phone,
+          pgId: newUser.pgId,
+          pgName: newUser.pgName || 'Gulmohar Haven PG',
+          roomNumber: newUser.roomNumber,
+          idType: 'Aadhaar',
+          idNumber: 'VERIFIED-ONLINE',
+          photoUrl: newUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          emergencyContactName: 'Guardian',
+          emergencyContactPhone: newUser.phone,
+          moveInDate: new Date().toISOString().slice(0, 10),
+          status: 'IN',
+          lastMovementTime: new Date().toISOString(),
+          active: true,
+        };
+        setResidents(prev => [newResident, ...prev]);
+      }
+    }
+
     setCurrentUser(newUser);
     setRoleState(newUser.role);
     if (newUser.pgId) {

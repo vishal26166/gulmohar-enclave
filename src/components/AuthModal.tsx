@@ -27,7 +27,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [signupRole, setSignupRole] = useState<Role>('RESIDENT');
   const [pgId, setPgId] = useState(pgs[0]?.id || 'pg-1');
   const [roomNumber, setRoomNumber] = useState('');
-  const [signupError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -35,11 +34,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     setLoginError(null);
 
-    const success = loginUser(loginEmail, loginPassword, loginRole);
-    if (success) {
+    const result = loginUser(loginEmail, loginPassword, loginRole);
+    if (result.success) {
       onClose();
     } else {
-      setLoginError(`Invalid login credentials for ${loginRole} role. Or click one of the quick demo login buttons below!`);
+      setLoginError(result.error || `Invalid login credentials for ${loginRole} role.`);
     }
   };
 
@@ -322,10 +321,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   )}
                 </div>
-              )}
-
-              {signupError && (
-                <p className="text-xs text-red-400 font-medium">{signupError}</p>
               )}
 
               <button

@@ -27,9 +27,9 @@ export const LoginScreen: React.FC = () => {
     e.preventDefault();
     setLoginError(null);
 
-    const success = loginUser(loginEmail, loginPassword, loginRole);
-    if (!success) {
-      setLoginError(`Invalid login credentials for ${loginRole} role. Use one of the quick demo login buttons below!`);
+    const result = loginUser(loginEmail, loginPassword, loginRole);
+    if (!result.success) {
+      setLoginError(result.error || `Invalid credentials for ${loginRole} role.`);
     }
   };
 
