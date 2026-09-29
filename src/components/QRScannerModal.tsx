@@ -10,7 +10,7 @@ interface QRScannerModalProps {
 }
 
 export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose }) => {
-  const { residents, markMovement } = useApp();
+  const { residents, userAccounts, pgs, markMovement } = useApp();
   const [scannedResident, setScannedResident] = useState<Resident | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -20,27 +20,63 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'reader';
 
-  // Process scanned decoded text (e.g. "res-101" or JSON or resident name)
+  // Process scanned decoded text (e.g. "usr-123", "res-101", "Sparsh Kumar Arya")
   const processDecodedText = (decodedText: string) => {
-    const textLower = decodedText.trim().toLowerCase();
+    const textClean = decodedText.trim();
+    const textLower = textClean.toLowerCase();
 
-    // Match resident by ID, Name, Phone, Room or ID Number
-    const found = residents.find(
+    // 1. Match in residents list
+    let found = residents.find(
       (r) =>
         r.id.toLowerCase() === textLower ||
         r.name.toLowerCase() === textLower ||
         r.phone.toLowerCase() === textLower ||
         r.roomNumber.toLowerCase() === textLower ||
         r.idNumber.toLowerCase() === textLower ||
-        textLower.includes(r.id.toLowerCase())
+        textLower.includes(r.id.toLowerCase()) ||
+        r.name.toLowerCase().includes(textLower)
     );
+
+    // 2. Fallback match in user accounts list if newly registered account
+    if (!found) {
+      const userMatch = userAccounts.find(
+        (u) =>
+          u.id.toLowerCase() === textLower ||
+          u.name.toLowerCase() === textLower ||
+          u.phone.toLowerCase() === textLower ||
+          u.email.toLowerCase() === textLower ||
+          textLower.includes(u.id.toLowerCase()) ||
+          u.name.toLowerCase().includes(textLower)
+      );
+
+      if (userMatch) {
+        const selectedPg = pgs.find((p) => p.id === (userMatch.pgId || 'pg-1'));
+        found = {
+          id: userMatch.id,
+          name: userMatch.name,
+          phone: userMatch.phone,
+          pgId: userMatch.pgId || 'pg-1',
+          pgName: userMatch.pgName || selectedPg?.name || 'Gulmohar Haven PG',
+          roomNumber: userMatch.roomNumber || '101-A',
+          idType: 'Aadhaar',
+          idNumber: 'VERIFIED-ONLINE',
+          photoUrl: userMatch.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          emergencyContactName: 'Guardian',
+          emergencyContactPhone: userMatch.phone,
+          moveInDate: new Date().toISOString().slice(0, 10),
+          status: 'IN',
+          lastMovementTime: new Date().toISOString(),
+          active: true,
+        };
+      }
+    }
 
     if (found) {
       setScannedResident(found);
       setScanMessage(`Scanned successfully: ${found.name} (${found.pgName}, Room ${found.roomNumber})`);
       setCameraError(null);
     } else {
-      setCameraError(`Unrecognized QR code or Resident Pass ID: "${decodedText}"`);
+      setCameraError(`Unrecognized QR code or Pass ID: "${decodedText}". Try typing name or room number below.`);
     }
   };
 
@@ -89,7 +125,6 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
 
   useEffect(() => {
     if (isOpen) {
-      // Auto-start camera when modal opens
       setTimeout(() => {
         startCamera();
       }, 300);
@@ -228,12 +263,12 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
           {/* Manual Input Search Fallback */}
           <form onSubmit={handleManualSubmit} className="pt-2 border-t border-slate-800 space-y-2">
             <label className="text-[11px] text-slate-400 font-semibold block">
-              Or enter Pass ID / Room Number manually:
+              Or enter Pass ID, Name or Room Number manually:
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="e.g. res-101 or 101-A or Aarav"
+                placeholder="e.g. Sparsh or res-101 or 101-A"
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
@@ -251,7 +286,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
           <div className="pt-2 border-t border-slate-800/80">
             <p className="text-[11px] text-slate-400 mb-1.5 font-semibold">Test Scanner Simulation:</p>
             <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
-              {residents.slice(0, 5).map((r) => (
+              {residents.slice(0, 6).map((r) => (
                 <button
                   key={r.id}
                   onClick={() => processDecodedText(r.id)}
