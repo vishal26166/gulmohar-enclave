@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { PG, Resident, MovementLog, AuditEntry, Visitor, SystemAlert, Role } from '../types';
-import { INITIAL_PGS, INITIAL_RESIDENTS, INITIAL_MOVEMENT_LOGS, INITIAL_AUDIT_LOGS, INITIAL_VISITORS, INITIAL_ALERTS } from '../data/initialData';
+import type { PG, Resident, MovementLog, AuditEntry, Visitor, SystemAlert, Role, UserAccount } from '../types';
+import { INITIAL_PGS, INITIAL_RESIDENTS, INITIAL_MOVEMENT_LOGS, INITIAL_AUDIT_LOGS, INITIAL_VISITORS, INITIAL_ALERTS, INITIAL_USER_ACCOUNTS } from '../data/initialData';
 
 interface AppContextType {
+  currentUser: UserAccount | null;
   role: Role;
   setRole: (role: Role) => void;
   activePgId: string;
@@ -13,8 +14,14 @@ interface AppContextType {
   auditLogs: AuditEntry[];
   visitors: Visitor[];
   alerts: SystemAlert[];
+  userAccounts: UserAccount[];
+
+  // Auth Actions
+  loginUser: (emailOrPhone: string, passwordStr: string, role: Role) => boolean;
+  registerUser: (newUser: UserAccount) => void;
+  logoutUser: () => void;
   
-  // Actions
+  // App Actions
   markMovement: (residentId: string, type: 'IN' | 'OUT', notes?: string) => { success: boolean; isLate: boolean };
   addResident: (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'>) => void;
   updateResident: (id: string, residentData: Partial<Resident>) => void;
@@ -34,10 +41,26 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'gulmohar_enclave_data_v1';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<Role>('GUARD');
-  const [activePgId, setActivePgId] = useState<string>('pg-1');
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_users`);
+    return saved ? JSON.parse(saved) : INITIAL_USER_ACCOUNTS;
+  });
 
-  // State initialization with localStorage backup
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_current_user`);
+    return saved ? JSON.parse(saved) : INITIAL_USER_ACCOUNTS[1]; // Default to Guard account
+  });
+
+  const [role, setRoleState] = useState<Role>(currentUser?.role || 'GUARD');
+  const [activePgId, setActivePgId] = useState<string>(currentUser?.pgId || 'pg-1');
+
+  const setRole = (newRole: Role) => {
+    setRoleState(newRole);
+    if (currentUser) {
+      setCurrentUser((prev) => prev ? { ...prev, role: newRole } : null);
+    }
+  };
+
   const [pgs, setPgs] = useState<PG[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_pgs`);
     return saved ? JSON.parse(saved) : INITIAL_PGS;
@@ -70,6 +93,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync state to local storage
   useEffect(() => {
+    localStorage.setItem(`${LOCAL_STORAGE_KEY}_users`, JSON.stringify(userAccounts));
+  }, [userAccounts]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_current_user`, JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem(`${LOCAL_STORAGE_KEY}_current_user`);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     localStorage.setItem(`${LOCAL_STORAGE_KEY}_pgs`, JSON.stringify(pgs));
   }, [pgs]);
 
@@ -98,11 +133,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `audit-${Date.now()}`,
       timestamp: new Date().toISOString(),
       userRole: role,
-      userName: role === 'GUARD' ? 'Gate Guard' : role === 'WARDEN' ? `Warden (${pgs.find(p=>p.id===activePgId)?.wardenName || 'PG Warden'})` : 'Society Admin',
+      userName: currentUser ? currentUser.name : 'System User',
       action,
       details,
     };
     setAuditLogs((prev) => [newEntry, ...prev]);
+  };
+
+  const loginUser = (emailOrPhone: string, _passwordStr: string, targetRole: Role): boolean => {
+    const inputClean = emailOrPhone.trim().toLowerCase();
+    
+    // Find matching user or fallback matching target role
+    let user = userAccounts.find(
+      (u) =>
+        (u.email.toLowerCase() === inputClean || u.phone.includes(inputClean)) &&
+        u.role === targetRole
+    );
+
+    if (!user) {
+      user = userAccounts.find((u) => u.role === targetRole);
+    }
+
+    if (user) {
+      setCurrentUser(user);
+      setRoleState(user.role);
+      if (user.pgId) {
+        setActivePgId(user.pgId);
+      }
+      addAuditLog('User Login', `${user.name} logged in successfully as ${user.role}.`);
+      return true;
+    }
+
+    return false;
+  };
+
+  const registerUser = (newUser: UserAccount) => {
+    setUserAccounts((prev) => [newUser, ...prev]);
+    setCurrentUser(newUser);
+    setRoleState(newUser.role);
+    if (newUser.pgId) {
+      setActivePgId(newUser.pgId);
+    }
+    addAuditLog('User Registration', `New user ${newUser.name} registered account as ${newUser.role}.`);
+  };
+
+  const logoutUser = () => {
+    addAuditLog('User Logout', `${currentUser?.name || 'User'} logged out.`);
+    setCurrentUser(null);
   };
 
   // Helper to check late entry
@@ -154,7 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       roomNumber: resident.roomNumber,
       type,
       timestamp: nowIso,
-      recordedBy: role === 'GUARD' ? 'Gate Guard (Gate 1)' : 'System Admin',
+      recordedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Gate Guard (Gate 1)',
       isLateEntry: isLate,
       notes: notes || (isLate ? `Late Entry after ${curfew} curfew` : `Gate ${type}`),
     };
@@ -307,6 +384,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(INITIAL_AUDIT_LOGS);
     setVisitors(INITIAL_VISITORS);
     setAlerts(INITIAL_ALERTS);
+    setUserAccounts(INITIAL_USER_ACCOUNTS);
+    setCurrentUser(INITIAL_USER_ACCOUNTS[1]);
     localStorage.clear();
     addAuditLog('System Reset', 'Reset all system database data to initial factory state.');
   };
@@ -314,6 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        currentUser,
         role,
         setRole,
         activePgId,
@@ -324,6 +404,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLogs,
         visitors,
         alerts,
+        userAccounts,
+        loginUser,
+        registerUser,
+        logoutUser,
         markMovement,
         addResident,
         updateResident,

@@ -1,5 +1,17 @@
 export type Role = 'GUARD' | 'WARDEN' | 'ADMIN' | 'RESIDENT';
 
+export interface UserAccount {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  role: Role;
+  pgId?: string; // Assigned PG for Warden or Resident
+  pgName?: string;
+  roomNumber?: string;
+  photoUrl?: string;
+}
+
 export interface PG {
   id: string;
   name: string;

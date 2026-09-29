@@ -10,6 +10,7 @@ import { EditResidentModal } from './components/EditResidentModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { VisitorModal } from './components/VisitorModal';
 import { EmergencyModal } from './components/EmergencyModal';
+import { AuthModal } from './components/AuthModal';
 import type { Resident } from './types';
 
 const MainContent: React.FC = () => {
@@ -21,12 +22,16 @@ const MainContent: React.FC = () => {
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       
-      {/* Top Navbar with role switcher & emergency trigger */}
-      <Navbar onOpenEmergency={() => setIsEmergencyModalOpen(true)} />
+      {/* Top Navbar with role switcher, user profile & emergency trigger */}
+      <Navbar
+        onOpenEmergency={() => setIsEmergencyModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+      />
 
       {/* Main Body View */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6">
@@ -65,6 +70,7 @@ const MainContent: React.FC = () => {
       <QRScannerModal isOpen={isQRScannerOpen} onClose={() => setIsQRScannerOpen(false)} />
       <VisitorModal isOpen={isVisitorModalOpen} onClose={() => setIsVisitorModalOpen(false)} />
       <EmergencyModal isOpen={isEmergencyModalOpen} onClose={() => setIsEmergencyModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 };

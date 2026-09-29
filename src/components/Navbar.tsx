@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle } from 'lucide-react';
+import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogIn, LogOut, KeyRound } from 'lucide-react';
 
 interface NavbarProps {
   onOpenEmergency: () => void;
+  onOpenAuthModal: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency }) => {
-  const { role, setRole, activePgId, setActivePgId, pgs, alerts, markAlertRead, clearAllAlerts } = useApp();
+export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal }) => {
+  const { currentUser, role, setRole, activePgId, setActivePgId, pgs, alerts, markAlertRead, clearAllAlerts, logoutUser } = useApp();
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
 
   const unreadAlerts = alerts.filter((a) => !a.read);
@@ -33,17 +34,36 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency }) => {
             </div>
           </div>
 
-          {/* Mobile SOS button */}
-          <button
-            onClick={onOpenEmergency}
-            className="md:hidden flex items-center gap-1 bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 text-xs px-2.5 py-1.5 rounded-lg font-semibold animate-pulse"
-          >
-            <Siren className="w-4 h-4 text-red-400" />
-            SOS
-          </button>
+          {/* Mobile SOS & Login button */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={onOpenEmergency}
+              className="flex items-center gap-1 bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 text-xs px-2.5 py-1.5 rounded-lg font-semibold animate-pulse"
+            >
+              <Siren className="w-4 h-4 text-red-400" />
+              SOS
+            </button>
+
+            {currentUser ? (
+              <button
+                onClick={logoutUser}
+                className="p-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold"
+                title="Log Out"
+              >
+                <LogOut className="w-4 h-4 text-red-400" />
+              </button>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="bg-indigo-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+              >
+                <LogIn className="w-3.5 h-3.5" /> Login
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Role Selection & PG Switcher */}
+        {/* Role Selection, Auth User & PG Switcher */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-end">
           
           {/* Role Switcher Pills */}
@@ -183,6 +203,36 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency }) => {
               </div>
             )}
           </div>
+
+          {/* User Auth Session Profile / Sign In button */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 p-1.5 pl-2.5 rounded-xl">
+              <img
+                src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                alt=""
+                className="w-7 h-7 rounded-full object-cover border border-slate-700"
+              />
+              <div className="hidden lg:block text-left text-xs">
+                <p className="font-bold text-white leading-tight truncate max-w-[110px]">{currentUser.name}</p>
+                <p className="text-[10px] text-indigo-300 font-semibold">{currentUser.role}</p>
+              </div>
+              <button
+                onClick={logoutUser}
+                className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition-all"
+                title="Log Out Session"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAuthModal}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4" />
+              Login / Sign Up
+            </button>
+          )}
 
           {/* Emergency SOS Button */}
           <button

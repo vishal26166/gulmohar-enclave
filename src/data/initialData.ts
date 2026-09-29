@@ -1,4 +1,65 @@
-import type { PG, Resident, MovementLog, AuditEntry, Visitor, SystemAlert } from '../types';
+import type { PG, Resident, MovementLog, AuditEntry, Visitor, SystemAlert, UserAccount } from '../types';
+
+export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
+  {
+    id: 'usr-admin',
+    name: 'Society Admin (Committee)',
+    phone: '+91 98765 00000',
+    email: 'admin@gulmohar.com',
+    role: 'ADMIN',
+    photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-guard',
+    name: 'Security Guard Bahadur',
+    phone: '+91 98765 11111',
+    email: 'guard@gulmohar.com',
+    role: 'GUARD',
+    photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-warden-1',
+    name: 'Rajesh Sharma (Warden)',
+    phone: '+91 98765 43210',
+    email: 'warden.pg1@gulmohar.com',
+    role: 'WARDEN',
+    pgId: 'pg-1',
+    pgName: 'Gulmohar Haven PG',
+    photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-warden-2',
+    name: 'Sunita Verma (Warden)',
+    phone: '+91 98765 43211',
+    email: 'warden.pg2@gulmohar.com',
+    role: 'WARDEN',
+    pgId: 'pg-2',
+    pgName: 'Royal Nest PG',
+    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-res-101',
+    name: 'Aarav Sharma',
+    phone: '+91 91234 56789',
+    email: 'aarav@gulmohar.com',
+    role: 'RESIDENT',
+    pgId: 'pg-1',
+    pgName: 'Gulmohar Haven PG',
+    roomNumber: '101-A',
+    photoUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-res-102',
+    name: 'Priya Negi',
+    phone: '+91 98234 11223',
+    email: 'priya@gulmohar.com',
+    role: 'RESIDENT',
+    pgId: 'pg-1',
+    pgName: 'Gulmohar Haven PG',
+    roomNumber: '102-B',
+    photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+  },
+];
 
 export const INITIAL_PGS: PG[] = [
   { id: 'pg-1', name: 'Gulmohar Haven PG', wardenName: 'Rajesh Sharma', wardenPhone: '+91 98765 43210', totalRooms: 20, capacity: 40, curfewTime: '22:30' },
