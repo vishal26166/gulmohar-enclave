@@ -1,20 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { User, Clock, Home, Send } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import type { Resident } from '../types';
 
 export const ResidentView: React.FC = () => {
-  const { residents, movementLogs, addVisitor } = useApp();
-  const [selectedResidentId, setSelectedResidentId] = useState<string>(residents[0]?.id || 'res-101');
+  const { currentUser, residents, movementLogs, addVisitor } = useApp();
+
+  // Find resident matching logged in user
+  const loggedInResident = residents.find(
+    (r) =>
+      r.id === currentUser?.id ||
+      r.phone === currentUser?.phone ||
+      r.name.toLowerCase() === currentUser?.name.toLowerCase()
+  );
+
+  // Fallback resident object if newly registered
+  const fallbackResident: Resident = {
+    id: currentUser?.id || 'res-new',
+    name: currentUser?.name || 'Sparsh Kumar Arya',
+    phone: currentUser?.phone || '+91 98000 00000',
+    pgId: currentUser?.pgId || 'pg-1',
+    pgName: currentUser?.pgName || 'Gulmohar Haven PG',
+    roomNumber: currentUser?.roomNumber || '101-A',
+    idType: 'Aadhaar',
+    idNumber: 'VERIFIED-ONLINE',
+    photoUrl: currentUser?.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    emergencyContactName: 'Guardian',
+    emergencyContactPhone: currentUser?.phone || '',
+    moveInDate: new Date().toISOString().slice(0, 10),
+    status: 'IN',
+    lastMovementTime: new Date().toISOString(),
+    active: true,
+  };
+
+  const initialResident = loggedInResident || fallbackResident;
+  const [selectedResidentId, setSelectedResidentId] = useState<string>(initialResident.id);
   const [showVisitorForm, setShowVisitorForm] = useState(false);
 
-  // Form state for visitor
+  useEffect(() => {
+    if (loggedInResident) {
+      setSelectedResidentId(loggedInResident.id);
+    }
+  }, [currentUser, loggedInResident]);
+
+  const activeResident = residents.find((r) => r.id === selectedResidentId) || initialResident;
+  const personalLogs = movementLogs.filter((l) => l.residentId === activeResident?.id);
+
+  // Visitor form state
   const [vName, setVName] = useState('');
   const [vPhone, setVPhone] = useState('');
   const [vPurpose, setVPurpose] = useState('');
-
-  const activeResident = residents.find((r) => r.id === selectedResidentId) || residents[0];
-  const personalLogs = movementLogs.filter((l) => l.residentId === activeResident?.id);
 
   const handleVisitorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,30 +71,38 @@ export const ResidentView: React.FC = () => {
     alert('Visitor pre-registration request sent to PG Warden for approval!');
   };
 
+  const isAdmin = currentUser?.role === 'ADMIN';
+
   return (
     <div className="space-y-6">
       
-      {/* Demo Selector Header */}
+      {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <User className="w-5 h-5 text-emerald-400" />
-          <h2 className="text-sm font-bold text-white">Resident Mobile Self-Service Portal</h2>
+          <div>
+            <h2 className="text-sm font-bold text-white">Resident Mobile Self-Service Portal</h2>
+            <p className="text-[11px] text-slate-400">Welcome, <strong className="text-emerald-400">{currentUser?.name || activeResident.name}</strong></p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs text-slate-400">Select Resident Profile:</span>
-          <select
-            value={selectedResidentId}
-            onChange={(e) => setSelectedResidentId(e.target.value)}
-            className="bg-slate-950 text-xs text-emerald-300 font-bold border border-slate-700 rounded-xl px-3 py-1.5 focus:outline-none"
-          >
-            {residents.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.pgName} - Rm {r.roomNumber})
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Demo Selector Header (Visible ONLY to Admin) */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs text-slate-400">Admin Preview Profile:</span>
+            <select
+              value={selectedResidentId}
+              onChange={(e) => setSelectedResidentId(e.target.value)}
+              className="bg-slate-950 text-xs text-emerald-300 font-bold border border-slate-700 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+            >
+              {residents.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.pgName} - Rm {r.roomNumber})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {activeResident && (

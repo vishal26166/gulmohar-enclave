@@ -48,7 +48,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_current_user`);
-    return saved ? JSON.parse(saved) : null; // Strictly null by default for auth wall!
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [role, setRoleState] = useState<Role>(currentUser?.role || 'GUARD');
@@ -171,7 +171,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
-    // 3. Authenticate User
+    // 3. Authenticate User & ensure Resident record exists in residents array
+    if (matchingUser.role === 'RESIDENT') {
+      const existingRes = residents.find(
+        (r) => r.id === matchingUser.id || r.phone === matchingUser.phone || r.name.toLowerCase() === matchingUser.name.toLowerCase()
+      );
+      if (!existingRes) {
+        const selectedPg = pgs.find((p) => p.id === (matchingUser.pgId || 'pg-1'));
+        const newRes: Resident = {
+          id: matchingUser.id,
+          name: matchingUser.name,
+          phone: matchingUser.phone,
+          pgId: matchingUser.pgId || 'pg-1',
+          pgName: selectedPg?.name || 'Gulmohar Haven PG',
+          roomNumber: matchingUser.roomNumber || '101',
+          idType: 'Aadhaar',
+          idNumber: 'VERIFIED-ONLINE',
+          photoUrl: matchingUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          emergencyContactName: 'Guardian',
+          emergencyContactPhone: matchingUser.phone,
+          moveInDate: new Date().toISOString().slice(0, 10),
+          status: 'IN',
+          lastMovementTime: new Date().toISOString(),
+          active: true,
+        };
+        setResidents((prev) => [newRes, ...prev]);
+      }
+    }
+
     setCurrentUser(matchingUser);
     setRoleState(matchingUser.role);
     if (matchingUser.pgId) {
@@ -186,28 +213,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserAccounts((prev) => [newUser, ...prev]);
 
     // Also sync to residents database if user registered as a resident!
-    if (newUser.role === 'RESIDENT' && newUser.pgId && newUser.roomNumber) {
-      const existingRes = residents.find(r => r.phone === newUser.phone || r.name.toLowerCase() === newUser.name.toLowerCase());
-      if (!existingRes) {
-        const newResident: Resident = {
-          id: newUser.id,
-          name: newUser.name,
-          phone: newUser.phone,
-          pgId: newUser.pgId,
-          pgName: newUser.pgName || 'Gulmohar Haven PG',
-          roomNumber: newUser.roomNumber,
-          idType: 'Aadhaar',
-          idNumber: 'VERIFIED-ONLINE',
-          photoUrl: newUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          emergencyContactName: 'Guardian',
-          emergencyContactPhone: newUser.phone,
-          moveInDate: new Date().toISOString().slice(0, 10),
-          status: 'IN',
-          lastMovementTime: new Date().toISOString(),
-          active: true,
-        };
-        setResidents(prev => [newResident, ...prev]);
-      }
+    if (newUser.role === 'RESIDENT') {
+      const selectedPg = pgs.find((p) => p.id === (newUser.pgId || 'pg-1'));
+      const newResident: Resident = {
+        id: newUser.id,
+        name: newUser.name,
+        phone: newUser.phone,
+        pgId: newUser.pgId || 'pg-1',
+        pgName: selectedPg?.name || 'Gulmohar Haven PG',
+        roomNumber: newUser.roomNumber || '101-A',
+        idType: 'Aadhaar',
+        idNumber: 'VERIFIED-ONLINE',
+        photoUrl: newUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        emergencyContactName: 'Guardian',
+        emergencyContactPhone: newUser.phone,
+        moveInDate: new Date().toISOString().slice(0, 10),
+        status: 'IN',
+        lastMovementTime: new Date().toISOString(),
+        active: true,
+      };
+      setResidents((prev) => [newResident, ...prev]);
     }
 
     setCurrentUser(newUser);
