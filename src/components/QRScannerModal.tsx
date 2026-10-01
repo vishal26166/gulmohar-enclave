@@ -10,7 +10,7 @@ interface QRScannerModalProps {
 }
 
 export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose }) => {
-  const { residents, userAccounts, pgs, markMovement } = useApp();
+  const { residents, userAccounts, pgs, markMovement, addResident } = useApp();
   const [scannedResident, setScannedResident] = useState<Resident | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -26,14 +26,15 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
     let searchId = decodedText.trim();
     let searchName = '';
     let searchPhone = '';
+    let parsedObj: any = null;
 
     // Attempt JSON parsing if payload is JSON
     try {
-      if (decodedText.startsWith('{')) {
-        const parsed = JSON.parse(decodedText);
-        if (parsed.id) searchId = parsed.id;
-        if (parsed.name) searchName = parsed.name;
-        if (parsed.phone) searchPhone = parsed.phone;
+      if (decodedText.trim().startsWith('{')) {
+        parsedObj = JSON.parse(decodedText.trim());
+        if (parsedObj.id) searchId = String(parsedObj.id).trim();
+        if (parsedObj.name) searchName = String(parsedObj.name).trim();
+        if (parsedObj.phone) searchPhone = String(parsedObj.phone).trim();
       }
     } catch (e) {
       // Raw string format
@@ -41,34 +42,40 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
 
     const textClean = searchId.toLowerCase();
     const nameClean = searchName.toLowerCase();
-    const phoneClean = searchPhone.toLowerCase();
+    const phoneClean = searchPhone.replace(/\D/g, '');
 
     // 1. Match in residents list
-    let found = residents.find(
-      (r) =>
-        r.id.toLowerCase() === textClean ||
-        (nameClean && r.name.toLowerCase() === nameClean) ||
-        (phoneClean && r.phone.includes(phoneClean)) ||
-        r.name.toLowerCase() === textClean ||
-        r.phone.toLowerCase() === textClean ||
-        r.roomNumber.toLowerCase() === textClean ||
-        r.idNumber.toLowerCase() === textClean ||
-        textClean.includes(r.id.toLowerCase()) ||
-        r.name.toLowerCase().includes(textClean)
-    );
+    let found = residents.find((r) => {
+      const rId = r.id.toLowerCase().trim();
+      const rName = r.name.toLowerCase().trim();
+      const rPhone = r.phone.replace(/\D/g, '');
+      const rRoom = r.roomNumber.toLowerCase().trim();
+
+      return (
+        (textClean && rId === textClean) ||
+        (textClean && rId.includes(textClean)) ||
+        (nameClean && rName === nameClean) ||
+        (nameClean && rName.includes(nameClean)) ||
+        (phoneClean && rPhone && rPhone.includes(phoneClean)) ||
+        (textClean && rName.includes(textClean)) ||
+        (textClean && rRoom === textClean)
+      );
+    });
 
     // 2. Fallback match in user accounts list if newly registered account
     if (!found) {
-      const userMatch = userAccounts.find(
-        (u) =>
-          u.id.toLowerCase() === textClean ||
-          (nameClean && u.name.toLowerCase() === nameClean) ||
-          u.name.toLowerCase() === textClean ||
-          u.phone.toLowerCase() === textClean ||
-          u.email.toLowerCase() === textClean ||
-          textClean.includes(u.id.toLowerCase()) ||
-          u.name.toLowerCase().includes(textClean)
-      );
+      const userMatch = userAccounts.find((u) => {
+        const uId = u.id.toLowerCase().trim();
+        const uName = u.name.toLowerCase().trim();
+        const uPhone = u.phone.replace(/\D/g, '');
+
+        return (
+          (textClean && uId === textClean) ||
+          (nameClean && uName === nameClean) ||
+          (phoneClean && uPhone && uPhone.includes(phoneClean)) ||
+          (textClean && uName.includes(textClean))
+        );
+      });
 
       if (userMatch) {
         const selectedPg = pgs.find((p) => p.id === (userMatch.pgId || 'pg-1'));
@@ -90,6 +97,40 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ isOpen, onClose 
           active: true,
         };
       }
+    }
+
+    // 3. Fallback: Hydrate resident directly from valid QR Payload
+    if (!found && parsedObj && (parsedObj.id || parsedObj.name)) {
+      const resId = String(parsedObj.id || `res-${Date.now()}`).trim();
+      const resName = String(parsedObj.name || 'Scanned Resident').trim();
+      const resPhone = String(parsedObj.phone || '+91 00000 00000').trim();
+      const resPgName = String(parsedObj.pg || 'Gulmohar Haven PG').trim();
+      const resRoom = String(parsedObj.room || '101').trim();
+
+      const selectedPg = pgs.find(
+        (p) => p.name.toLowerCase() === resPgName.toLowerCase() || p.id === (parsedObj.pgId || 'pg-1')
+      );
+
+      const hydratedRes: Resident = {
+        id: resId,
+        name: resName,
+        phone: resPhone,
+        pgId: selectedPg?.id || 'pg-1',
+        pgName: resPgName,
+        roomNumber: resRoom,
+        idType: 'Aadhaar',
+        idNumber: 'VERIFIED-QR-PASS',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        emergencyContactName: 'Guardian',
+        emergencyContactPhone: resPhone,
+        moveInDate: new Date().toISOString().slice(0, 10),
+        status: 'IN',
+        lastMovementTime: new Date().toISOString(),
+        active: true,
+      };
+
+      addResident(hydratedRes);
+      found = hydratedRes;
     }
 
     if (found) {

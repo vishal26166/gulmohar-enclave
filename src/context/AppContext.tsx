@@ -25,7 +25,7 @@ interface AppContextType {
   
   // App Actions
   markMovement: (residentId: string, type: 'IN' | 'OUT', notes?: string) => { success: boolean; isLate: boolean };
-  addResident: (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => void;
+  addResident: (residentData: Partial<Pick<Resident, 'id'>> & Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => void;
   updateResident: (id: string, residentData: Partial<Resident>) => void;
   deleteResident: (id: string) => void;
   updatePGWarden: (pgId: string, wardenName: string, wardenPhone: string, curfewTime: string) => void;
@@ -410,8 +410,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, isLate };
   };
 
-  const addResident = (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => {
-    const newId = `res-${Date.now()}`;
+  const addResident = (residentData: Partial<Pick<Resident, 'id'>> & Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => {
+    const newId = residentData.id || `res-${Date.now()}`;
     const initialPass = residentData.password || 'resident123';
     const newResident: Resident = {
       ...residentData,
@@ -421,7 +421,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastMovementTime: new Date().toISOString(),
       active: true,
     };
-    setResidents((prev) => [newResident, ...prev]);
+
+    setResidents((prev) => {
+      if (prev.some((r) => r.id === newId)) {
+        return prev.map((r) => (r.id === newId ? { ...r, ...newResident } : r));
+      }
+      return [newResident, ...prev];
+    });
 
     // Also register user account so resident can log in
     const newUserAcc: UserAccount = {
@@ -436,9 +442,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       roomNumber: residentData.roomNumber,
       photoUrl: residentData.photoUrl,
     };
-    setUserAccounts((prev) => [newUserAcc, ...prev]);
+    setUserAccounts((prev) => {
+      if (prev.some((u) => u.id === newId)) return prev;
+      return [newUserAcc, ...prev];
+    });
 
-    addAuditLog('Resident Registered', `Added new resident ${newResident.name} to ${newResident.pgName}, Room ${newResident.roomNumber}.`);
+    addAuditLog('Resident Registered', `Added resident ${newResident.name} (${newResident.pgName}, Room ${newResident.roomNumber}).`);
   };
 
   const updateResident = (id: string, residentData: Partial<Resident>) => {
