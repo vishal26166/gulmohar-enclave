@@ -40,7 +40,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'gulmohar_enclave_data_v1';
+const LOCAL_STORAGE_KEY = 'gulmohar_enclave_prod_v2';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {

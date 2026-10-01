@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Role, UserAccount } from '../types';
-import { INITIAL_USER_ACCOUNTS } from '../data/initialData';
 import { Shield, Building2, UserCheck, User, LogIn, UserPlus, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const LoginScreen: React.FC = () => {
@@ -30,10 +29,6 @@ export const LoginScreen: React.FC = () => {
     if (!result.success) {
       setLoginError(result.error || `Invalid credentials for ${loginRole} role.`);
     }
-  };
-
-  const handleDemoLogin = (account: UserAccount) => {
-    loginUser(account.email, account.password || 'admin123', account.role);
   };
 
   const handleSignupSubmit = (e: React.FormEvent) => {
@@ -217,27 +212,24 @@ export const LoginScreen: React.FC = () => {
                   Log In to {loginRole} Portal <ArrowRight className="w-4 h-4" />
                 </button>
 
-                {/* Quick 1-Click Demo Logins */}
-                <div className="pt-4 border-t border-slate-800 space-y-2">
-                  <p className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Quick 1-Click Demo Login (Password auto-verified):
+                {/* System Initial Access Info */}
+                <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400 space-y-1.5 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+                  <p className="font-bold text-slate-300 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Default Initial System Access Credentials:
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {INITIAL_USER_ACCOUNTS.map((acc) => (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        onClick={() => handleDemoLogin(acc)}
-                        className="text-left p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-xs text-slate-300 transition-all flex items-center gap-2.5 cursor-pointer"
-                      >
-                        <img src={acc.photoUrl} alt="" className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0" />
-                        <div className="truncate min-w-0">
-                          <p className="font-bold text-white truncate text-[11px]">{acc.name}</p>
-                          <p className="text-indigo-300 text-[9px] font-semibold uppercase">{acc.role} • <span className="text-slate-400 font-mono font-normal">[{acc.password || 'admin123'}]</span></p>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px] font-mono text-slate-300">
+                    <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
+                      <span className="text-indigo-400 font-bold block">ADMIN:</span>
+                      admin@gulmohar.com<br/>pass: admin123
+                    </div>
+                    <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
+                      <span className="text-amber-400 font-bold block">GUARD:</span>
+                      guard@gulmohar.com<br/>pass: guard123
+                    </div>
+                    <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
+                      <span className="text-cyan-400 font-bold block">WARDEN:</span>
+                      warden.pg1@gulmohar.com<br/>pass: warden123
+                    </div>
                   </div>
                 </div>
               </form>
