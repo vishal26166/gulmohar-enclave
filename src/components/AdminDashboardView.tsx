@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import type { Resident } from '../types';
-import { Building2, Users, UserPlus, Download, ShieldCheck, History, Search, Trash2, Edit3, Siren, RefreshCw, FileText } from 'lucide-react';
+import type { Resident, Role, UserAccount } from '../types';
+import { Building2, Users, UserPlus, Download, ShieldCheck, History, Search, Trash2, Edit3, Siren, RefreshCw, FileText, UserCheck, X } from 'lucide-react';
 
 interface AdminDashboardViewProps {
   onOpenAddResident: () => void;
@@ -24,6 +24,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     exportResidentsCSV,
     exportLogsCSV,
     resetToInitialData,
+    registerUser,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'RESIDENTS' | 'PGS' | 'HEADCOUNT' | 'AUDIT'>('RESIDENTS');
@@ -35,6 +36,40 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [editWardenName, setEditWardenName] = useState('');
   const [editWardenPhone, setEditWardenPhone] = useState('');
   const [editCurfew, setEditCurfew] = useState('');
+
+  // Staff Modal State
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [staffName, setStaffName] = useState('');
+  const [staffPhone, setStaffPhone] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffPassword, setStaffPassword] = useState('warden123');
+  const [staffRole, setStaffRole] = useState<Role>('WARDEN');
+  const [staffPgId, setStaffPgId] = useState(pgs[0]?.id || 'pg-1');
+
+  const handleStaffSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const selectedPg = pgs.find((p) => p.id === staffPgId);
+
+    const newStaff: UserAccount = {
+      id: `usr-${Date.now()}`,
+      name: staffName,
+      phone: staffPhone,
+      email: staffEmail,
+      password: staffPassword,
+      role: staffRole,
+      pgId: staffRole === 'WARDEN' ? staffPgId : undefined,
+      pgName: staffRole === 'WARDEN' ? selectedPg?.name : undefined,
+      photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+    };
+
+    registerUser(newStaff);
+    alert(`Successfully registered ${staffRole} account for ${staffName}!`);
+    setStaffName('');
+    setStaffPhone('');
+    setStaffEmail('');
+    setStaffPassword('warden123');
+    setIsStaffModalOpen(false);
+  };
 
   const filteredResidents = residents.filter((r) => {
     const matchesSearch =
@@ -89,8 +124,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Action Export Buttons */}
+          {/* Quick Action Export & Staff Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsStaffModalOpen(true)}
+              className="flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs shadow-lg shadow-cyan-600/20 transition-all cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4" />
+              + Provision Staff Account
+            </button>
             <button
               onClick={exportResidentsCSV}
               className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold px-3 py-2 rounded-xl text-xs transition-all cursor-pointer"
@@ -479,6 +521,125 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <RefreshCw className="w-3.5 h-3.5" />
               Reset System Data
             </button>
+          </div>
+        </div>
+      )}
+      {/* Admin Staff & Warden Provisioning Modal */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+            
+            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-xl">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Provision New Staff Account</h3>
+                  <p className="text-xs text-slate-400">Register new PG Warden or Gate Guard login credentials</p>
+                </div>
+              </div>
+              <button onClick={() => setIsStaffModalOpen(false)} className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-800">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleStaffSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">Staff Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ramesh Chandra Sharma"
+                  value={staffName}
+                  onChange={(e) => setStaffName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Phone Number *</label>
+                  <input
+                    type="text"
+                    placeholder="+91 98765 00000"
+                    value={staffPhone}
+                    onChange={(e) => setStaffPhone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    placeholder="warden@gulmohar.com"
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Assigned Initial Password *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. warden123"
+                    value={staffPassword}
+                    onChange={(e) => setStaffPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:border-cyan-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Staff Role *</label>
+                  <select
+                    value={staffRole}
+                    onChange={(e) => setStaffRole(e.target.value as Role)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                  >
+                    <option value="WARDEN">PG Warden</option>
+                    <option value="GUARD">Gate Guard</option>
+                  </select>
+                </div>
+              </div>
+
+              {staffRole === 'WARDEN' && (
+                <div>
+                  <label className="text-slate-300 font-semibold block mb-1">Assigned PG Accommodation *</label>
+                  <select
+                    value={staffPgId}
+                    onChange={(e) => setStaffPgId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                  >
+                    {pgs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsStaffModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-cyan-600/20"
+                >
+                  Save & Provision Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
