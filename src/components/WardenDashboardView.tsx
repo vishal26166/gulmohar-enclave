@@ -1,18 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Building2, AlertTriangle, Phone, Search, Check, X, ShieldAlert } from 'lucide-react';
 
 export const WardenDashboardView: React.FC = () => {
-  const { activePgId, pgs, residents, movementLogs, visitors, updateVisitorStatus, updatePGWarden } = useApp();
+  const { currentUser, activePgId, pgs, residents, movementLogs, visitors, updateVisitorStatus, updatePGWarden } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingWarden, setEditingWarden] = useState(false);
 
   // Filter to active PG
   const currentPg = pgs.find((p) => p.id === activePgId) || pgs[0];
 
-  const [wardenName, setWardenName] = useState(currentPg.wardenName);
-  const [wardenPhone, setWardenPhone] = useState(currentPg.wardenPhone);
+  const displayedWardenName =
+    currentUser?.role === 'WARDEN' && currentUser.pgId === currentPg.id
+      ? currentUser.name
+      : currentPg.wardenName;
+
+  const displayedWardenPhone =
+    currentUser?.role === 'WARDEN' && currentUser.pgId === currentPg.id
+      ? currentUser.phone
+      : currentPg.wardenPhone;
+
+  const [wardenName, setWardenName] = useState(displayedWardenName);
+  const [wardenPhone, setWardenPhone] = useState(displayedWardenPhone);
   const [curfewTime, setCurfewTime] = useState(currentPg.curfewTime);
+
+  useEffect(() => {
+    setWardenName(displayedWardenName);
+    setWardenPhone(displayedWardenPhone);
+    setCurfewTime(currentPg.curfewTime);
+  }, [currentPg, currentUser, displayedWardenName, displayedWardenPhone]);
 
   const pgResidents = residents.filter((r) => r.pgId === currentPg.id);
   const pgLogs = movementLogs.filter((l) => l.pgId === currentPg.id);
@@ -57,7 +73,7 @@ export const WardenDashboardView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Warden: <strong className="text-white">{currentPg.wardenName}</strong> ({currentPg.wardenPhone}) • Curfew:{' '}
+                Warden: <strong className="text-white">{displayedWardenName}</strong> ({displayedWardenPhone}) • Curfew:{' '}
                 <strong className="text-amber-400">{currentPg.curfewTime}</strong>
               </p>
             </div>
@@ -65,12 +81,12 @@ export const WardenDashboardView: React.FC = () => {
 
           <button
             onClick={() => {
-              setWardenName(currentPg.wardenName);
-              setWardenPhone(currentPg.wardenPhone);
+              setWardenName(displayedWardenName);
+              setWardenPhone(displayedWardenPhone);
               setCurfewTime(currentPg.curfewTime);
               setEditingWarden(!editingWarden);
             }}
-            className="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold px-3 py-2 rounded-xl transition-all self-start lg:self-center"
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold px-3 py-2 rounded-xl transition-all self-start lg:self-center cursor-pointer"
           >
             {editingWarden ? 'Cancel Edit' : 'Edit Warden & Curfew Settings'}
           </button>

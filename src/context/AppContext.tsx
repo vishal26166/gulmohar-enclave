@@ -210,6 +210,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    if (matchingUser.role === 'WARDEN' && matchingUser.pgId) {
+      setPgs((prev) =>
+        prev.map((p) =>
+          p.id === matchingUser.pgId
+            ? { ...p, wardenName: matchingUser.name, wardenPhone: matchingUser.phone }
+            : p
+        )
+      );
+    }
+
     setCurrentUser(matchingUser);
     setRoleState(matchingUser.role);
     if (matchingUser.pgId) {
@@ -295,6 +305,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         active: true,
       };
       setResidents((prev) => [newResident, ...prev]);
+    }
+
+    if (newUser.role === 'WARDEN' && newUser.pgId) {
+      setPgs((prev) =>
+        prev.map((p) =>
+          p.id === newUser.pgId
+            ? { ...p, wardenName: newUser.name, wardenPhone: newUser.phone }
+            : p
+        )
+      );
     }
 
     setCurrentUser(newUser);
