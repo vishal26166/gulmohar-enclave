@@ -13,6 +13,7 @@ export const AddResidentModal: React.FC<AddResidentModalProps> = ({ isOpen, onCl
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('resident123');
   const [pgId, setPgId] = useState(pgs[0]?.id || 'pg-1');
   const [roomNumber, setRoomNumber] = useState('');
   const [idType, setIdType] = useState<IDType>('Aadhaar');
@@ -34,6 +35,7 @@ export const AddResidentModal: React.FC<AddResidentModalProps> = ({ isOpen, onCl
     addResident({
       name,
       phone,
+      password,
       pgId,
       pgName: selectedPg.name,
       roomNumber,
@@ -95,6 +97,20 @@ export const AddResidentModal: React.FC<AddResidentModalProps> = ({ isOpen, onCl
                 required
               />
             </div>
+          </div>
+
+          {/* Initial Password Assignment */}
+          <div>
+            <label className="text-slate-300 font-semibold block mb-1">Assigned Initial Password *</label>
+            <input
+              type="text"
+              placeholder="Initial Login Password (e.g. resident123)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:border-indigo-500 font-mono"
+              required
+            />
+            <p className="text-[10px] text-slate-500 mt-0.5">Provide this password to the resident for their first login.</p>
           </div>
 
           {/* PG Assignment & Room Number */}

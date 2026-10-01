@@ -5,6 +5,7 @@ export interface UserAccount {
   name: string;
   phone: string;
   email: string;
+  password?: string;
   role: Role;
   pgId?: string; // Assigned PG for Warden or Resident
   pgName?: string;
@@ -28,6 +29,7 @@ export interface Resident {
   id: string;
   name: string;
   phone: string;
+  password?: string;
   pgId: string;
   pgName: string;
   roomNumber: string;

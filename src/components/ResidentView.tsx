@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, Clock, Home, Send, QrCode } from 'lucide-react';
+import { User, Clock, Home, Send, QrCode, Camera, Key, Lock, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Resident } from '../types';
 
 export const ResidentView: React.FC = () => {
-  const { currentUser, residents, movementLogs, addVisitor } = useApp();
+  const { currentUser, residents, movementLogs, addVisitor, changePassword, updateProfilePhoto } = useApp();
 
   // Find resident matching logged in user
   const loggedInResident = residents.find(
@@ -37,6 +37,14 @@ export const ResidentView: React.FC = () => {
   const initialResident = loggedInResident || fallbackResident;
   const [selectedResidentId, setSelectedResidentId] = useState<string>(initialResident.id);
   const [showVisitorForm, setShowVisitorForm] = useState(false);
+  
+  // Password change state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [passError, setPassError] = useState<string | null>(null);
+  const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (loggedInResident) {
@@ -71,6 +79,58 @@ export const ResidentView: React.FC = () => {
     alert('Visitor pre-registration request sent to PG Warden for approval!');
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit. Please select a smaller photo.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string' && activeResident) {
+        updateProfilePhoto(activeResident.id, reader.result);
+        alert('Profile photo updated successfully!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassError(null);
+    setPassSuccess(null);
+
+    if (newPass.length < 4) {
+      setPassError('New password must be at least 4 characters long.');
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      setPassError('New password and confirm password do not match.');
+      return;
+    }
+
+    const targetId = activeResident ? activeResident.id : currentUser?.id;
+    if (!targetId) return;
+
+    const res = changePassword(targetId, currentPass, newPass);
+    if (!res.success) {
+      setPassError(res.error || 'Failed to update password.');
+    } else {
+      setPassSuccess('Password updated successfully!');
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPassSuccess(null);
+      }, 1500);
+    }
+  };
+
   const isAdmin = currentUser?.role === 'ADMIN';
 
   // Format rich QR Payload for optical scanners
@@ -95,23 +155,33 @@ export const ResidentView: React.FC = () => {
           </div>
         </div>
 
-        {/* Demo Selector Header (Visible ONLY to Admin) */}
-        {isAdmin && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs text-slate-400">Admin Preview Profile:</span>
-            <select
-              value={selectedResidentId}
-              onChange={(e) => setSelectedResidentId(e.target.value)}
-              className="bg-slate-950 text-xs text-emerald-300 font-bold border border-slate-700 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
-            >
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.pgName} - Rm {r.roomNumber})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          {/* Change Password Button */}
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-slate-950 hover:bg-slate-800 text-slate-200 font-bold text-xs px-3 py-1.5 border border-slate-700 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Key className="w-3.5 h-3.5 text-amber-400" /> Change Password
+          </button>
+
+          {/* Demo Selector Header (Visible ONLY to Admin) */}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">Preview:</span>
+              <select
+                value={selectedResidentId}
+                onChange={(e) => setSelectedResidentId(e.target.value)}
+                className="bg-slate-950 text-xs text-emerald-300 font-bold border border-slate-700 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+              >
+                {residents.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({r.pgName} - Rm {r.roomNumber})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {activeResident && (
@@ -127,6 +197,13 @@ export const ResidentView: React.FC = () => {
                 alt={activeResident.name}
                 className="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-xl"
               />
+              <label
+                className="absolute -bottom-2 -left-2 bg-slate-900 border border-emerald-500/50 hover:bg-emerald-600 text-emerald-400 hover:text-slate-950 p-2 rounded-full cursor-pointer shadow-lg transition-all"
+                title="Upload New Profile Photo"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+              </label>
               <span
                 className={`absolute -bottom-2 -right-2 text-[10px] font-extrabold px-3 py-1 rounded-full border uppercase shadow-lg ${
                   activeResident.status === 'IN'
@@ -295,6 +372,98 @@ export const ResidentView: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-white text-base">Change Resident Password</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPassError(null);
+                  setPassSuccess(null);
+                }}
+                className="text-slate-400 hover:text-white text-xs bg-slate-800 px-2.5 py-1 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">Current Password *</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="password"
+                    placeholder="Enter current password"
+                    value={currentPass}
+                    onChange={(e) => setCurrentPass(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">New Password *</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="password"
+                    placeholder="Enter new password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1">Confirm New Password *</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="password"
+                    placeholder="Re-enter new password"
+                    value={confirmPass}
+                    onChange={(e) => setConfirmPass(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {passError && (
+                <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <p>{passError}</p>
+                </div>
+              )}
+
+              {passSuccess && (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <p>{passSuccess}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-emerald-600/20 mt-2 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <ShieldCheck className="w-4 h-4" /> Save New Password
+              </button>
+            </form>
           </div>
         </div>
       )}

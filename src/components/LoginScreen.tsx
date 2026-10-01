@@ -19,9 +19,8 @@ export const LoginScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [signupRole, setSignupRole] = useState<Role>('RESIDENT');
+  const [signupRole, setSignupRole] = useState<Role>('WARDEN');
   const [pgId, setPgId] = useState(pgs[0]?.id || 'pg-1');
-  const [roomNumber, setRoomNumber] = useState('');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +33,16 @@ export const LoginScreen: React.FC = () => {
   };
 
   const handleDemoLogin = (account: UserAccount) => {
-    loginUser(account.email, 'password123', account.role);
+    loginUser(account.email, account.password || 'admin123', account.role);
   };
 
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (signupRole === 'RESIDENT') {
+      alert('Resident registration must be completed by the PG Warden or Society Admin upon room allocation.');
+      return;
+    }
 
     const selectedPg = pgs.find((p) => p.id === pgId);
 
@@ -47,10 +51,10 @@ export const LoginScreen: React.FC = () => {
       name,
       phone,
       email,
+      password,
       role: signupRole,
-      pgId: signupRole === 'WARDEN' || signupRole === 'RESIDENT' ? pgId : undefined,
+      pgId: signupRole === 'WARDEN' ? pgId : undefined,
       pgName: selectedPg?.name,
-      roomNumber: signupRole === 'RESIDENT' ? roomNumber : undefined,
       photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     };
 
@@ -217,7 +221,7 @@ export const LoginScreen: React.FC = () => {
                 <div className="pt-4 border-t border-slate-800 space-y-2">
                   <p className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Quick 1-Click Demo Login (Select Role):
+                    Quick 1-Click Demo Login (Password auto-verified):
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {INITIAL_USER_ACCOUNTS.map((acc) => (
@@ -230,7 +234,7 @@ export const LoginScreen: React.FC = () => {
                         <img src={acc.photoUrl} alt="" className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0" />
                         <div className="truncate min-w-0">
                           <p className="font-bold text-white truncate text-[11px]">{acc.name}</p>
-                          <p className="text-indigo-300 text-[9px] font-semibold uppercase">{acc.role} {acc.pgName ? `(${acc.pgName.slice(0, 10)}...)` : ''}</p>
+                          <p className="text-indigo-300 text-[9px] font-semibold uppercase">{acc.role} • <span className="text-slate-400 font-mono font-normal">[{acc.password || 'admin123'}]</span></p>
                         </div>
                       </button>
                     ))}
@@ -242,8 +246,19 @@ export const LoginScreen: React.FC = () => {
             {/* TAB 2: SIGNUP */}
             {activeTab === 'SIGNUP' && (
               <form onSubmit={handleSignupSubmit} className="space-y-3.5 text-xs">
+                
+                {/* Informational Notice Banner for Residents */}
+                <div className="p-3 bg-amber-950/40 border border-amber-500/30 text-amber-200 rounded-xl text-xs space-y-1">
+                  <p className="font-bold flex items-center gap-1 text-amber-400">
+                    <AlertCircle className="w-3.5 h-3.5" /> Notice for Residents:
+                  </p>
+                  <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    Public resident registration is disabled. Resident Login IDs and Passwords are provided directly by your PG Warden or Society Admin upon room allocation.
+                  </p>
+                </div>
+
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Full Name *</label>
+                  <label className="text-slate-300 font-semibold block mb-1">Staff Full Name *</label>
                   <input
                     type="text"
                     placeholder="e.g. Vikramaditya Rawat"
@@ -270,7 +285,7 @@ export const LoginScreen: React.FC = () => {
                     <label className="text-slate-300 font-semibold block mb-1">Email Address *</label>
                     <input
                       type="email"
-                      placeholder="user@gulmohar.com"
+                      placeholder="staff@gulmohar.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
@@ -281,7 +296,7 @@ export const LoginScreen: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-slate-300 font-semibold block mb-1">Password *</label>
+                    <label className="text-slate-300 font-semibold block mb-1">Account Password *</label>
                     <input
                       type="password"
                       placeholder="••••••••"
@@ -292,57 +307,40 @@ export const LoginScreen: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-slate-300 font-semibold block mb-1">Role *</label>
+                    <label className="text-slate-300 font-semibold block mb-1">Staff Role *</label>
                     <select
                       value={signupRole}
                       onChange={(e) => setSignupRole(e.target.value as Role)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
                     >
-                      <option value="RESIDENT">Resident Occupant</option>
                       <option value="WARDEN">PG Warden</option>
                       <option value="GUARD">Gate Guard</option>
                     </select>
                   </div>
                 </div>
 
-                {(signupRole === 'WARDEN' || signupRole === 'RESIDENT') && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div>
-                      <label className="text-slate-300 font-semibold block mb-1">Assigned PG *</label>
-                      <select
-                        value={pgId}
-                        onChange={(e) => setPgId(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
-                      >
-                        {pgs.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {signupRole === 'RESIDENT' && (
-                      <div>
-                        <label className="text-slate-300 font-semibold block mb-1">Room Number *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 104-A"
-                          value={roomNumber}
-                          onChange={(e) => setRoomNumber(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
-                          required
-                        />
-                      </div>
-                    )}
+                {signupRole === 'WARDEN' && (
+                  <div className="pt-1">
+                    <label className="text-slate-300 font-semibold block mb-1">Assigned PG Accommodation *</label>
+                    <select
+                      value={pgId}
+                      onChange={(e) => setPgId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                    >
+                      {pgs.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-600/20 mt-2 cursor-pointer"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-indigo-600/20 mt-2 cursor-pointer"
                 >
-                  Create Account & Log In
+                  Register Staff Account
                 </button>
               </form>
             )}

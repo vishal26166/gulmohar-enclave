@@ -20,10 +20,12 @@ interface AppContextType {
   loginUser: (emailOrPhone: string, passwordStr: string, selectedRole: Role) => { success: boolean; error?: string };
   registerUser: (newUser: UserAccount) => void;
   logoutUser: () => void;
+  changePassword: (userId: string, currentPasswordStr: string, newPasswordStr: string) => { success: boolean; error?: string };
+  updateProfilePhoto: (userId: string, photoUrl: string) => void;
   
   // App Actions
   markMovement: (residentId: string, type: 'IN' | 'OUT', notes?: string) => { success: boolean; isLate: boolean };
-  addResident: (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'>) => void;
+  addResident: (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => void;
   updateResident: (id: string, residentData: Partial<Resident>) => void;
   deleteResident: (id: string) => void;
   updatePGWarden: (pgId: string, wardenName: string, wardenPhone: string, curfewTime: string) => void;
@@ -142,7 +144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginUser = (
     emailOrPhone: string,
-    _passwordStr: string,
+    passwordStr: string,
     selectedRole: Role
   ): { success: boolean; error?: string } => {
     const inputClean = emailOrPhone.trim().toLowerCase();
@@ -159,7 +161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!matchingUser) {
       return {
         success: false,
-        error: `No account found registered with "${emailOrPhone}". Please sign up first.`,
+        error: `No account found registered with "${emailOrPhone}". Please contact your Warden or Admin to provision your ID.`,
       };
     }
 
@@ -171,7 +173,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
-    // 3. Authenticate User & ensure Resident record exists in residents array
+    // 3. Strict Password Verification
+    if (matchingUser.password && matchingUser.password !== passwordStr) {
+      return {
+        success: false,
+        error: 'Incorrect Password. Please check your password and try again.',
+      };
+    }
+
+    // 4. Authenticate User & ensure Resident record exists in residents array
     if (matchingUser.role === 'RESIDENT') {
       const existingRes = residents.find(
         (r) => r.id === matchingUser.id || r.phone === matchingUser.phone || r.name.toLowerCase() === matchingUser.name.toLowerCase()
@@ -182,6 +192,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: matchingUser.id,
           name: matchingUser.name,
           phone: matchingUser.phone,
+          password: matchingUser.password || 'resident123',
           pgId: matchingUser.pgId || 'pg-1',
           pgName: selectedPg?.name || 'Gulmohar Haven PG',
           roomNumber: matchingUser.roomNumber || '101',
@@ -209,6 +220,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
+  const changePassword = (
+    userId: string,
+    currentPasswordStr: string,
+    newPasswordStr: string
+  ): { success: boolean; error?: string } => {
+    const user = userAccounts.find((u) => u.id === userId);
+    if (!user) {
+      return { success: false, error: 'User account not found.' };
+    }
+
+    // Check current password if defined
+    if (user.password && user.password !== currentPasswordStr) {
+      return { success: false, error: 'Current password does not match.' };
+    }
+
+    // Update in user accounts
+    setUserAccounts((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, password: newPasswordStr } : u))
+    );
+
+    // Update in residents if resident
+    setResidents((prev) =>
+      prev.map((r) => (r.id === userId ? { ...r, password: newPasswordStr } : r))
+    );
+
+    // Update current user if logged in
+    if (currentUser?.id === userId) {
+      setCurrentUser((prev) => (prev ? { ...prev, password: newPasswordStr } : null));
+    }
+
+    addAuditLog('Password Changed', `User ${user.name} successfully updated their password.`);
+    return { success: true };
+  };
+
+  const updateProfilePhoto = (userId: string, photoUrl: string) => {
+    setUserAccounts((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, photoUrl } : u))
+    );
+
+    setResidents((prev) =>
+      prev.map((r) => (r.id === userId ? { ...r, photoUrl } : r))
+    );
+
+    if (currentUser?.id === userId) {
+      setCurrentUser((prev) => (prev ? { ...prev, photoUrl } : null));
+    }
+
+    addAuditLog('Profile Photo Updated', `User ID ${userId} updated their profile picture.`);
+  };
+
   const registerUser = (newUser: UserAccount) => {
     setUserAccounts((prev) => [newUser, ...prev]);
 
@@ -219,6 +280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: newUser.id,
         name: newUser.name,
         phone: newUser.phone,
+        password: newUser.password || 'resident123',
         pgId: newUser.pgId || 'pg-1',
         pgName: selectedPg?.name || 'Gulmohar Haven PG',
         roomNumber: newUser.roomNumber || '101-A',
@@ -328,16 +390,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, isLate };
   };
 
-  const addResident = (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'>) => {
+  const addResident = (residentData: Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => {
     const newId = `res-${Date.now()}`;
+    const initialPass = residentData.password || 'resident123';
     const newResident: Resident = {
       ...residentData,
       id: newId,
+      password: initialPass,
       status: 'IN',
       lastMovementTime: new Date().toISOString(),
       active: true,
     };
     setResidents((prev) => [newResident, ...prev]);
+
+    // Also register user account so resident can log in
+    const newUserAcc: UserAccount = {
+      id: newId,
+      name: residentData.name,
+      phone: residentData.phone,
+      email: `${residentData.name.toLowerCase().replace(/\s+/g, '.')}@gulmohar.com`,
+      password: initialPass,
+      role: 'RESIDENT',
+      pgId: residentData.pgId,
+      pgName: residentData.pgName,
+      roomNumber: residentData.roomNumber,
+      photoUrl: residentData.photoUrl,
+    };
+    setUserAccounts((prev) => [newUserAcc, ...prev]);
+
     addAuditLog('Resident Registered', `Added new resident ${newResident.name} to ${newResident.pgName}, Room ${newResident.roomNumber}.`);
   };
 
@@ -474,6 +554,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginUser,
         registerUser,
         logoutUser,
+        changePassword,
+        updateProfilePhoto,
         markMovement,
         addResident,
         updateResident,
