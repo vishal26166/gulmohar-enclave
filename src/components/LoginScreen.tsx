@@ -164,20 +164,6 @@ export const LoginScreen: React.FC = () => {
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   Public self-registration is disabled for security. Accounts for Wardens, Security Guards, and Residents are provisioned by Society Administration.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px] font-mono text-slate-300 pt-1">
-                  <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-indigo-400 font-bold block">ADMIN:</span>
-                    admin@gulmohar.com<br/>pass: admin123
-                  </div>
-                  <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-amber-400 font-bold block">GUARD:</span>
-                    guard@gulmohar.com<br/>pass: guard123
-                  </div>
-                  <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-cyan-400 font-bold block">WARDEN:</span>
-                    warden.pg1@gulmohar.com<br/>pass: warden123
-                  </div>
-                </div>
               </div>
             </form>
           </div>
