@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogOut, KeyRound } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface NavbarProps {
   onOpenEmergency: () => void;
@@ -10,6 +11,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal }) => {
   const { currentUser, role, setRole, activePgId, setActivePgId, pgs, alerts, markAlertRead, clearAllAlerts, logoutUser } = useApp();
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const unreadAlerts = alerts.filter((a) => !a.read);
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -220,8 +222,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
                 <p className="text-[10px] text-indigo-300 font-semibold">{currentUser.role} {currentUser.pgName ? `(${currentUser.pgName})` : ''}</p>
               </div>
               <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 rounded-lg transition-all cursor-pointer"
+                title="Change Account Password"
+              >
+                <KeyRound className="w-4 h-4 text-indigo-400" />
+              </button>
+              <button
                 onClick={logoutUser}
-                className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition-all"
+                className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition-all cursor-pointer"
                 title="Log Out Session"
               >
                 <LogOut className="w-4 h-4 text-red-400" />
@@ -247,6 +256,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
           </button>
         </div>
       </div>
+
+      {/* Account Password Change Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </header>
   );
 };
