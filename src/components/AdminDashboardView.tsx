@@ -20,7 +20,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     movementLogs,
     auditLogs,
     deleteResident,
-    updatePGWarden,
+    updatePGDetails,
     exportResidentsCSV,
     exportLogsCSV,
     resetToInitialData,
@@ -33,6 +33,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [editingPgId, setEditingPgId] = useState<string | null>(null);
 
   // PG Edit state
+  const [editPgName, setEditPgName] = useState('');
+  const [editTotalRooms, setEditTotalRooms] = useState<number>(0);
+  const [editCapacity, setEditCapacity] = useState<number>(0);
   const [editWardenName, setEditWardenName] = useState('');
   const [editWardenPhone, setEditWardenPhone] = useState('');
   const [editCurfew, setEditCurfew] = useState('');
@@ -90,6 +93,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     const pg = pgs.find((p) => p.id === pgId);
     if (pg) {
       setEditingPgId(pgId);
+      setEditPgName(pg.name);
+      setEditTotalRooms(pg.totalRooms);
+      setEditCapacity(pg.capacity);
       setEditWardenName(pg.wardenName);
       setEditWardenPhone(pg.wardenPhone);
       setEditCurfew(pg.curfewTime);
@@ -97,7 +103,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   };
 
   const handleSavePg = (pgId: string) => {
-    updatePGWarden(pgId, editWardenName, editWardenPhone, editCurfew);
+    updatePGDetails(pgId, {
+      name: editPgName,
+      totalRooms: Number(editTotalRooms),
+      capacity: Number(editCapacity),
+      wardenName: editWardenName,
+      wardenPhone: editWardenPhone,
+      curfewTime: editCurfew,
+    });
     setEditingPgId(null);
   };
 
@@ -372,49 +385,85 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     {isEditing ? (
                       <div className="space-y-2 mt-3 text-xs">
                         <div>
-                          <label className="text-[10px] text-slate-400">Warden Name</label>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">PG Building Name</label>
+                          <input
+                            type="text"
+                            value={editPgName}
+                            onChange={(e) => setEditPgName(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-bold"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-slate-400 block mb-0.5">Total Rooms</label>
+                            <input
+                              type="number"
+                              value={editTotalRooms}
+                              onChange={(e) => setEditTotalRooms(Number(e.target.value))}
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono"
+                              min={1}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-400 block mb-0.5">Total Capacity (Beds)</label>
+                            <input
+                              type="number"
+                              value={editCapacity}
+                              onChange={(e) => setEditCapacity(Number(e.target.value))}
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono"
+                              min={1}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">Warden Name</label>
                           <input
                             type="text"
                             value={editWardenName}
                             onChange={(e) => setEditWardenName(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white"
                           />
                         </div>
+
                         <div>
-                          <label className="text-[10px] text-slate-400">Warden Phone</label>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">Warden Contact Phone</label>
                           <input
                             type="text"
                             value={editWardenPhone}
                             onChange={(e) => setEditWardenPhone(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white"
                           />
                         </div>
+
                         <div>
-                          <label className="text-[10px] text-slate-400">Curfew Time</label>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">Night Curfew Time</label>
                           <input
                             type="time"
                             value={editCurfew}
                             onChange={(e) => setEditCurfew(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono"
                           />
                         </div>
-                        <div className="flex gap-2 pt-1">
+
+                        <div className="flex gap-2 pt-2">
                           <button
                             onClick={() => handleSavePg(pg.id)}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded text-xs"
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition-all cursor-pointer"
                           >
-                            Save
+                            Save PG Details
                           </button>
                           <button
                             onClick={() => setEditingPgId(null)}
-                            className="flex-1 bg-slate-800 text-slate-300 py-1.5 rounded text-xs"
+                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-xl text-xs transition-all cursor-pointer"
                           >
                             Cancel
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs space-y-1 text-slate-300 mt-2">
+                      <div className="text-xs space-y-1.5 text-slate-300 mt-2">
                         <p>
                           Warden: <strong className="text-white">{pg.wardenName}</strong>
                         </p>
@@ -423,7 +472,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           Night Curfew: <strong className="text-amber-400">{pg.curfewTime}</strong>
                         </p>
                         <p className="text-slate-400">
-                          Capacity: {pg.capacity} beds ({pg.totalRooms} rooms)
+                          Capacity: <strong className="text-indigo-300">{pg.capacity} beds</strong> ({pg.totalRooms} rooms)
                         </p>
                       </div>
                     )}
@@ -432,10 +481,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   {!isEditing && (
                     <button
                       onClick={() => handleStartEditPg(pg.id)}
-                      className="mt-4 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-xs py-1.5 rounded-xl font-semibold flex items-center justify-center gap-1"
+                      className="mt-4 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-xs py-2 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      Edit Warden Info
+                      Edit PG, Beds & Warden Setup
                     </button>
                   )}
                 </div>

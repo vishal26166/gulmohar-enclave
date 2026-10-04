@@ -28,6 +28,10 @@ interface AppContextType {
   addResident: (residentData: Partial<Pick<Resident, 'id'>> & Omit<Resident, 'id' | 'status' | 'lastMovementTime' | 'active'> & { password?: string }) => void;
   updateResident: (id: string, residentData: Partial<Resident>) => void;
   deleteResident: (id: string) => void;
+  updatePGDetails: (
+    pgId: string,
+    pgData: Partial<Pick<PG, 'name' | 'wardenName' | 'wardenPhone' | 'curfewTime' | 'totalRooms' | 'capacity'>>
+  ) => void;
   updatePGWarden: (pgId: string, wardenName: string, wardenPhone: string, curfewTime: string) => void;
   addVisitor: (visitor: Omit<Visitor, 'id' | 'approvalStatus'>) => void;
   updateVisitorStatus: (visitorId: string, status: 'APPROVED' | 'REJECTED') => void;
@@ -465,12 +469,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updatePGWarden = (pgId: string, wardenName: string, wardenPhone: string, curfewTime: string) => {
+  const updatePGDetails = (
+    pgId: string,
+    pgData: Partial<Pick<PG, 'name' | 'wardenName' | 'wardenPhone' | 'curfewTime' | 'totalRooms' | 'capacity'>>
+  ) => {
     setPgs((prev) =>
-      prev.map((p) => (p.id === pgId ? { ...p, wardenName, wardenPhone, curfewTime } : p))
+      prev.map((p) => (p.id === pgId ? { ...p, ...pgData } : p))
     );
+
+    if (pgData.name) {
+      const newPgName = pgData.name;
+      setResidents((prev) =>
+        prev.map((r) => (r.pgId === pgId ? { ...r, pgName: newPgName } : r))
+      );
+      setUserAccounts((prev) =>
+        prev.map((u) => (u.pgId === pgId ? { ...u, pgName: newPgName } : u))
+      );
+      setMovementLogs((prev) =>
+        prev.map((l) => (l.pgId === pgId ? { ...l, pgName: newPgName } : l))
+      );
+    }
+
     const pg = pgs.find((p) => p.id === pgId);
-    addAuditLog('PG Warden Updated', `Updated warden info for ${pg?.name || pgId}: ${wardenName} (${wardenPhone}), Curfew: ${curfewTime}.`);
+    addAuditLog(
+      'PG Details Updated',
+      `Updated PG structure for ${pgData.name || pg?.name || pgId} (Rooms: ${pgData.totalRooms ?? pg?.totalRooms}, Capacity: ${pgData.capacity ?? pg?.capacity} beds).`
+    );
+  };
+
+  const updatePGWarden = (pgId: string, wardenName: string, wardenPhone: string, curfewTime: string) => {
+    updatePGDetails(pgId, { wardenName, wardenPhone, curfewTime });
   };
 
   const addVisitor = (visitorData: Omit<Visitor, 'id' | 'approvalStatus'>) => {
@@ -593,6 +621,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addResident,
         updateResident,
         deleteResident,
+        updatePGDetails,
         updatePGWarden,
         addVisitor,
         updateVisitorStatus,
