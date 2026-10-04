@@ -502,26 +502,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const headers = ['ID', 'Name', 'Phone', 'PG Name', 'Room', 'ID Type', 'ID Number', 'Emergency Contact', 'Emergency Phone', 'Status', 'Move In Date'];
     const rows = residents.map((r) => [
       r.id,
-      `"${r.name}"`,
-      `"${r.phone}"`,
-      `"${r.pgName}"`,
-      `"${r.roomNumber}"`,
-      `"${r.idType}"`,
-      `"${r.idNumber}"`,
-      `"${r.emergencyContactName}"`,
-      `"${r.emergencyContactPhone}"`,
+      `"${(r.name || '').replace(/"/g, '""')}"`,
+      `"${(r.phone || '').replace(/"/g, '""')}"`,
+      `"${(r.pgName || '').replace(/"/g, '""')}"`,
+      `"${(r.roomNumber || '').replace(/"/g, '""')}"`,
+      `"${(r.idType || '').replace(/"/g, '""')}"`,
+      `"${(r.idNumber || '').replace(/"/g, '""')}"`,
+      `"${(r.emergencyContactName || '').replace(/"/g, '""')}"`,
+      `"${(r.emergencyContactPhone || '').replace(/"/g, '""')}"`,
       r.status,
       r.moveInDate,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvString = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `gulmohar_enclave_residents_${new Date().toISOString().slice(0,10)}.csv`);
+    link.href = url;
+    link.setAttribute('download', `gulmohar_enclave_residents_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     addAuditLog('CSV Export', 'Exported resident database as CSV.');
   };
@@ -531,23 +533,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const rows = movementLogs.map((l) => [
       l.id,
       `"${new Date(l.timestamp).toLocaleString()}"`,
-      `"${l.residentName}"`,
-      `"${l.pgName}"`,
-      `"${l.roomNumber}"`,
+      `"${(l.residentName || '').replace(/"/g, '""')}"`,
+      `"${(l.pgName || '').replace(/"/g, '""')}"`,
+      `"${(l.roomNumber || '').replace(/"/g, '""')}"`,
       l.type,
       l.isLateEntry ? 'YES' : 'NO',
-      `"${l.recordedBy}"`,
-      `"${l.notes || ''}"`,
+      `"${(l.recordedBy || '').replace(/"/g, '""')}"`,
+      `"${(l.notes || '').replace(/"/g, '""')}"`,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvString = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `gulmohar_enclave_gate_logs_${new Date().toISOString().slice(0,10)}.csv`);
+    link.href = url;
+    link.setAttribute('download', `gulmohar_enclave_gate_logs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     addAuditLog('CSV Export', 'Exported gate movement logs as CSV.');
   };
