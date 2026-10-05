@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Resident, Role, UserAccount } from '../types';
-import { Building2, Users, UserPlus, Download, ShieldCheck, History, Search, Trash2, Edit3, Siren, RefreshCw, FileText, UserCheck, X } from 'lucide-react';
+import { Building2, Users, UserPlus, Download, ShieldCheck, History, Search, Trash2, Edit3, Siren, RefreshCw, FileText, UserCheck, X, Eye, Check } from 'lucide-react';
 
 interface AdminDashboardViewProps {
   onOpenAddResident: () => void;
@@ -19,6 +19,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     residents,
     movementLogs,
     auditLogs,
+    visitors,
+    updateVisitorStatus,
+    userAccounts,
+    setRole,
+    setActivePgId,
     deleteResident,
     updatePGDetails,
     exportResidentsCSV,
@@ -27,7 +32,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     registerUser,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'RESIDENTS' | 'PGS' | 'HEADCOUNT' | 'AUDIT'>('RESIDENTS');
+  const [activeTab, setActiveTab] = useState<'RESIDENTS' | 'PGS' | 'WARDENS' | 'HEADCOUNT' | 'AUDIT'>('RESIDENTS');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPgFilter, setSelectedPgFilter] = useState('ALL');
   const [editingPgId, setEditingPgId] = useState<string | null>(null);
@@ -214,7 +219,19 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           }`}
         >
           <Building2 className="w-4 h-4" />
-          22 PGs Setup & Wardens
+          22 PGs Setup
+        </button>
+
+        <button
+          onClick={() => setActiveTab('WARDENS')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs transition-all whitespace-nowrap ${
+            activeTab === 'WARDENS'
+              ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          <Eye className="w-4 h-4 text-cyan-400" />
+          Warden Real-Time Monitor
         </button>
 
         <button
@@ -491,6 +508,158 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* TAB 3: WARDEN REAL-TIME MONITOR */}
+      {activeTab === 'WARDENS' && (
+        <div className="space-y-6">
+          
+          {/* Warden Monitor Header */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-cyan-400" />
+                  Live Warden Activity & Visitor Approval Center
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real-time monitoring of all 22 PG wardens, live resident counts, curfew compliance, and pending visitor approvals.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs px-3 py-1 rounded-full font-mono font-bold animate-pulse">
+                  ● LIVE DATA STREAM
+                </span>
+              </div>
+            </div>
+
+            {/* Wardens Real-Time Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+              {pgs.map((pg) => {
+                const pgRes = residents.filter((r) => r.pgId === pg.id);
+                const countIn = pgRes.filter((r) => r.status === 'IN').length;
+                const countOut = pgRes.filter((r) => r.status === 'OUT').length;
+                const countLate = movementLogs.filter((l) => l.pgId === pg.id && l.isLateEntry).length;
+                const pendingVisitors = visitors.filter((v) => {
+                  const host = residents.find((r) => r.id === v.hostResidentId);
+                  return host?.pgId === pg.id && v.approvalStatus === 'PENDING';
+                });
+
+                const wardenUser = userAccounts.find(
+                  (u) => u.role === 'WARDEN' && u.pgId === pg.id
+                );
+
+                return (
+                  <div key={pg.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between hover:border-cyan-500/40 transition-all">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2.5">
+                        <div>
+                          <h4 className="font-bold text-white text-sm">{pg.name}</h4>
+                          <p className="text-[11px] text-slate-400 font-mono">Curfew: <strong className="text-amber-400">{pg.curfewTime}</strong></p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setActivePgId(pg.id);
+                            setRole('WARDEN');
+                          }}
+                          className="px-2.5 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                          title="Switch to live Warden View for this PG"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Inspect Live
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-3 mb-3">
+                        <img
+                          src={wardenUser?.photoUrl || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'}
+                          alt={pg.wardenName}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-700"
+                        />
+                        <div>
+                          <p className="font-bold text-slate-200 text-xs">{pg.wardenName}</p>
+                          <p className="text-[11px] text-slate-400">{pg.wardenPhone}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-mono font-bold mb-2">
+                        <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-300">
+                          {countIn} INSIDE
+                        </div>
+                        <div className="p-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300">
+                          {countOut} OUTSIDE
+                        </div>
+                        <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300">
+                          {countLate} LATE
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Pending Visitors:</span>
+                      {pendingVisitors.length > 0 ? (
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold rounded-full animate-pulse">
+                          ⚠️ {pendingVisitors.length} Awaiting Approval
+                        </span>
+                      ) : (
+                        <span className="text-emerald-400 font-semibold">✓ None Pending</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Pending Visitor Approvals Master Control */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <h3 className="font-bold text-white text-base flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-indigo-400" />
+              Live Warden Visitor Approvals Desk
+            </h3>
+
+            {visitors.filter((v) => v.approvalStatus === 'PENDING').length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-6 bg-slate-950 rounded-xl border border-slate-800">
+                No pending visitor requests awaiting approval across all 22 PGs.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {visitors
+                  .filter((v) => v.approvalStatus === 'PENDING')
+                  .map((vis) => (
+                    <div key={vis.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-xs">{vis.visitorName}</span>
+                        <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                          PENDING
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-300 space-y-0.5">
+                        <p>Phone: <span className="font-mono text-slate-400">{vis.visitorPhone}</span></p>
+                        <p>Purpose: <span className="text-slate-400">{vis.purpose}</span></p>
+                        <p>Host: <strong className="text-cyan-300">{vis.hostResidentName}</strong> ({vis.hostPgName}, Room {vis.hostRoom})</p>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => updateVisitorStatus(vis.id, 'APPROVED')}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Approve
+                        </button>
+                        <button
+                          onClick={() => updateVisitorStatus(vis.id, 'REJECTED')}
+                          className="flex-1 bg-red-950/60 hover:bg-red-900 border border-red-500/40 text-red-300 font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

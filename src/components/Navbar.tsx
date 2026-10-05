@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogOut, KeyRound } from 'lucide-react';
+import { Shield, Building2, UserCheck, User, Bell, Siren, AlertTriangle, LogOut, KeyRound, UserCog } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { EditProfileModal } from './EditProfileModal';
 
 interface NavbarProps {
   onOpenEmergency: () => void;
@@ -12,6 +13,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
   const { currentUser, role, setRole, activePgId, setActivePgId, pgs, alerts, markAlertRead, clearAllAlerts, logoutUser } = useApp();
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const unreadAlerts = alerts.filter((a) => !a.read);
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -215,12 +217,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
               <img
                 src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
                 alt=""
-                className="w-7 h-7 rounded-full object-cover border border-slate-700"
+                className="w-7 h-7 rounded-full object-cover border border-slate-700 cursor-pointer"
+                onClick={() => setIsProfileModalOpen(true)}
+                title="Click to edit profile & photo"
               />
-              <div className="hidden lg:block text-left text-xs">
-                <p className="font-bold text-white leading-tight truncate max-w-[110px]">{currentUser.name}</p>
+              <div className="hidden lg:block text-left text-xs cursor-pointer" onClick={() => setIsProfileModalOpen(true)}>
+                <p className="font-bold text-white leading-tight truncate max-w-[110px] hover:text-indigo-300 transition-colors">{currentUser.name}</p>
                 <p className="text-[10px] text-indigo-300 font-semibold">{currentUser.role} {currentUser.pgName ? `(${currentUser.pgName})` : ''}</p>
               </div>
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 rounded-lg transition-all cursor-pointer"
+                title="Edit Profile Name & Photo"
+              >
+                <UserCog className="w-4 h-4 text-cyan-400" />
+              </button>
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
                 className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-indigo-400 rounded-lg transition-all cursor-pointer"
@@ -261,6 +272,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenAuthModal
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Edit Profile Details & Photo Modal */}
+      <EditProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
     </header>
   );

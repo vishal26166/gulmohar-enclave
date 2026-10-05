@@ -22,6 +22,7 @@ interface AppContextType {
   logoutUser: () => void;
   changePassword: (userId: string, currentPasswordStr: string, newPasswordStr: string) => { success: boolean; error?: string };
   updateProfilePhoto: (userId: string, photoUrl: string) => void;
+  updateUserProfile: (userId: string, profileData: Partial<Pick<UserAccount, 'name' | 'phone' | 'photoUrl'>>) => void;
   
   // App Actions
   markMovement: (residentId: string, type: 'IN' | 'OUT', notes?: string) => { success: boolean; isLate: boolean };
@@ -282,6 +283,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     addAuditLog('Profile Photo Updated', `User ID ${userId} updated their profile picture.`);
+  };
+
+  const updateUserProfile = (
+    userId: string,
+    profileData: Partial<Pick<UserAccount, 'name' | 'phone' | 'photoUrl'>>
+  ) => {
+    setUserAccounts((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, ...profileData } : u))
+    );
+
+    setResidents((prev) =>
+      prev.map((r) => (r.id === userId ? { ...r, ...profileData } : r))
+    );
+
+    if (currentUser?.id === userId) {
+      setCurrentUser((prev) => (prev ? { ...prev, ...profileData } : null));
+    }
+
+    addAuditLog('Profile Updated', `User ID ${userId} updated profile details (${Object.keys(profileData).join(', ')}).`);
   };
 
   const registerUser = (newUser: UserAccount) => {
@@ -617,6 +637,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logoutUser,
         changePassword,
         updateProfilePhoto,
+        updateUserProfile,
         markMovement,
         addResident,
         updateResident,
